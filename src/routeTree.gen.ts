@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as RelatoriosRouteImport } from './routes/relatorios'
+import { Route as MeuPainelRouteImport } from './routes/meu-painel'
 import { Route as InsightsRouteImport } from './routes/insights'
 import { Route as FinanceiroRouteImport } from './routes/financeiro'
 import { Route as ClientesRouteImport } from './routes/clientes'
@@ -20,6 +21,11 @@ import { Route as IndexRouteImport } from './routes/index'
 const RelatoriosRoute = RelatoriosRouteImport.update({
   id: '/relatorios',
   path: '/relatorios',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MeuPainelRoute = MeuPainelRouteImport.update({
+  id: '/meu-painel',
+  path: '/meu-painel',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InsightsRoute = InsightsRouteImport.update({
@@ -60,6 +66,7 @@ export interface FileRoutesByFullPath {
   '/clientes': typeof ClientesRoute
   '/financeiro': typeof FinanceiroRoute
   '/insights': typeof InsightsRoute
+  '/meu-painel': typeof MeuPainelRoute
   '/relatorios': typeof RelatoriosRoute
 }
 export interface FileRoutesByTo {
@@ -69,6 +76,7 @@ export interface FileRoutesByTo {
   '/clientes': typeof ClientesRoute
   '/financeiro': typeof FinanceiroRoute
   '/insights': typeof InsightsRoute
+  '/meu-painel': typeof MeuPainelRoute
   '/relatorios': typeof RelatoriosRoute
 }
 export interface FileRoutesById {
@@ -79,6 +87,7 @@ export interface FileRoutesById {
   '/clientes': typeof ClientesRoute
   '/financeiro': typeof FinanceiroRoute
   '/insights': typeof InsightsRoute
+  '/meu-painel': typeof MeuPainelRoute
   '/relatorios': typeof RelatoriosRoute
 }
 export interface FileRouteTypes {
@@ -90,6 +99,7 @@ export interface FileRouteTypes {
     | '/clientes'
     | '/financeiro'
     | '/insights'
+    | '/meu-painel'
     | '/relatorios'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -99,6 +109,7 @@ export interface FileRouteTypes {
     | '/clientes'
     | '/financeiro'
     | '/insights'
+    | '/meu-painel'
     | '/relatorios'
   id:
     | '__root__'
@@ -108,6 +119,7 @@ export interface FileRouteTypes {
     | '/clientes'
     | '/financeiro'
     | '/insights'
+    | '/meu-painel'
     | '/relatorios'
   fileRoutesById: FileRoutesById
 }
@@ -118,6 +130,7 @@ export interface RootRouteChildren {
   ClientesRoute: typeof ClientesRoute
   FinanceiroRoute: typeof FinanceiroRoute
   InsightsRoute: typeof InsightsRoute
+  MeuPainelRoute: typeof MeuPainelRoute
   RelatoriosRoute: typeof RelatoriosRoute
 }
 
@@ -128,6 +141,13 @@ declare module '@tanstack/react-router' {
       path: '/relatorios'
       fullPath: '/relatorios'
       preLoaderRoute: typeof RelatoriosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/meu-painel': {
+      id: '/meu-painel'
+      path: '/meu-painel'
+      fullPath: '/meu-painel'
+      preLoaderRoute: typeof MeuPainelRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/insights': {
@@ -182,8 +202,18 @@ const rootRouteChildren: RootRouteChildren = {
   ClientesRoute: ClientesRoute,
   FinanceiroRoute: FinanceiroRoute,
   InsightsRoute: InsightsRoute,
+  MeuPainelRoute: MeuPainelRoute,
   RelatoriosRoute: RelatoriosRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
