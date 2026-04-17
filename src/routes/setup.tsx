@@ -100,7 +100,7 @@ function SetupPage() {
           </p>
           <Link
             to="/auth"
-            className="mt-6 inline-flex items-center justify-center px-4 py-2.5 rounded-lg bg-[image:var(--gradient-primary)] text-primary-foreground text-sm font-medium shadow-[var(--shadow-glow)]"
+            className="mt-6 inline-flex items-center justify-center px-4 py-2.5 rounded-lg bg-[image:var(--gradient-primary)] text-primary-foreground text-sm font-medium shadow-[var(--shadow-glow)] cursor-pointer"
           >
             Ir para login
           </Link>
