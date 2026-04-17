@@ -42,23 +42,28 @@ function SetupPage() {
     setSubmitting(true);
     setError(null);
 
+    // Tenta cadastrar; se já existir, faz login direto.
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: { emailRedirectTo: window.location.origin },
     });
 
-    if (signUpError || !signUpData.user) {
-      setError(signUpError?.message ?? "Falha ao criar conta");
+    const alreadyExists =
+      signUpError &&
+      (signUpError.message?.toLowerCase().includes("already") ||
+        (signUpError as { code?: string }).code === "user_already_exists");
+
+    if (signUpError && !alreadyExists) {
+      setError(signUpError.message);
       setSubmitting(false);
       return;
     }
 
-    // Garante sessão ativa para passar pela RLS de user_roles
-    if (!signUpData.session) {
+    if (alreadyExists || !signUpData?.session) {
       const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
       if (signInError) {
-        setError(signInError.message);
+        setError(`Conta já existe e a senha não confere: ${signInError.message}`);
         setSubmitting(false);
         return;
       }
