@@ -98,10 +98,12 @@ export function SmartChart() {
                 borderRadius: 12,
                 fontSize: 12,
               }}
-              formatter={(value: number, name) => {
-                if (name === "Investimento") return [brl(value), name];
-                return [num(value), name];
-              }}
+              formatter={((value: unknown, name: unknown) => {
+                const v = Number(value);
+                const n = String(name);
+                if (n === "Investimento") return [brl(v), n];
+                return [num(v), n];
+              }) as never}
             />
             <Legend wrapperStyle={{ fontSize: 12 }} />
             {showSpend && (
