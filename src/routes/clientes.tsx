@@ -36,10 +36,39 @@ function ClientesPage() {
   const [name, setName] = useState("");
   const [segment, setSegment] = useState("");
   const [ownerEmail, setOwnerEmail] = useState("");
+  const [accessClient, setAccessClient] = useState<Row | null>(null);
+  const [accessEmail, setAccessEmail] = useState("");
+  const [accessPassword, setAccessPassword] = useState("");
+  const [accessSubmitting, setAccessSubmitting] = useState(false);
+  const createUserFn = useServerFn(createClientUser);
 
   useEffect(() => {
     void load();
   }, []);
+
+  async function handleCreateAccess(e: React.FormEvent) {
+    e.preventDefault();
+    if (!accessClient) return;
+    setAccessSubmitting(true);
+    try {
+      const res = await createUserFn({
+        data: { email: accessEmail, password: accessPassword, clientId: accessClient.id },
+      });
+      if (res.error) {
+        toast.error(res.error);
+      } else {
+        toast.success("Acesso criado e vinculado ao cliente");
+        setAccessClient(null);
+        setAccessEmail("");
+        setAccessPassword("");
+        void load();
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao criar acesso");
+    } finally {
+      setAccessSubmitting(false);
+    }
+  }
 
   async function load() {
     setLoading(true);
