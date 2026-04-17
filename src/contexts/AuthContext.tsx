@@ -28,9 +28,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(sess?.user ?? null);
       if (sess?.user) {
         // diferir chamada async para evitar deadlock
-        setTimeout(() => fetchRole(sess.user.id), 0);
+        setTimeout(() => {
+          fetchRole(sess.user.id).finally(() => setLoading(false));
+        }, 0);
       } else {
         setRole(null);
+        setLoading(false);
       }
     });
 
