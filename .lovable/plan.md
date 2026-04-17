@@ -1,31 +1,18 @@
 
+O erro é claro: o servidor não está conseguindo ler `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` do ambiente. Mas pelo `<secrets>` na config, esses dois secrets JÁ EXISTEM no projeto (LOVABLE_API_KEY, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_DB_URL).
 
-Olhando o que foi feito: a página `/admin/usuarios` e o backend (`admin-users-manage.ts`) já estão criados, e o link no sidebar foi adicionado. Em teoria, está pronto pra usar — só falta validar.
+O problema então é que `client.server.ts` está lendo via `process.env.SUPABASE_URL` / `process.env.SUPABASE_SERVICE_ROLE_KEY`, mas no runtime do Worker (TanStack Start em Cloudflare) os secrets do Lovable Cloud nem sempre são expostos como `process.env.*` — em dev local especialmente.
 
-## Próximo passo: testar end-to-end
+Vou explicar isso pro usuário em linguagem simples e propor o fix.
 
-Não tem nada pra codar agora. O que precisa acontecer:
+## Plano
 
-1. **Recarregue o app** (a rota `/admin/usuarios` foi adicionada agora; se não tiver feito reload desde então, o `routeTree.gen.ts` precisa ser regenerado pelo dev server).
-2. **No menu lateral**, clique em **Usuários** (ícone novo, só aparece pra admin).
-3. **Verifique** que:
-   - A tabela lista todos os usuários (você + clientes que já criou).
-   - Você aparece marcado como "você" e com badge admin.
-   - Pode mudar o papel de um cliente no dropdown.
-   - O botão "Senha" abre o modal e redefine.
-   - O botão de lixeira fica desabilitado pra você mesmo, mas funciona pra outros.
-   - Busca filtra por email/cliente/papel.
+Explicar em português simples + propor a correção:
 
-## Se algo falhar
+1. **O que é o erro**: A página de Usuários precisa de uma "chave de admin" pra acessar o backend com permissões totais (listar todos os usuários, mudar senha, etc). Essa chave existe no projeto, mas não está sendo entregue pro código do servidor no ambiente de desenvolvimento.
 
-Me diga exatamente o que aconteceu (mensagem de erro, comportamento estranho, tela em branco, etc.) que eu corrijo. Cenários prováveis:
+2. **A correção**: Ajustar `src/integrations/supabase/client.server.ts` pra ler a chave de múltiplas fontes (process.env + import.meta.env como fallback) e dar mensagem de erro melhor. Se mesmo assim faltar, posso pedir pra adicionar o secret manualmente.
 
-- **Link "Usuários" não aparece no sidebar** → checar `AppLayout.tsx` (condicional por role).
-- **Tabela vazia ou erro 401/403** → checar se `assertAdmin` está reconhecendo seu user_id.
-- **Erro ao mudar role de você mesmo pra cliente** → você se trava fora do admin; vou adicionar proteção pra não permitir auto-rebaixamento.
-- **Erro de RLS em `clients` ao desvincular no delete** → o service_role bypassa RLS, então não deve dar, mas se der eu investigo.
+3. **Próximo passo**: Aprovar o plano → eu corrijo o `client.server.ts` → você recarrega e testa.
 
-## Depois que validar
-
-Sigo pra **Opção B (recuperação de senha por email)** ou outra coisa que você priorizar.
-
+Plano curto, sem código novo grande, só fix de leitura de env.
