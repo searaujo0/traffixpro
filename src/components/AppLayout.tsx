@@ -37,9 +37,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   const initials = (user?.email ?? "AD").slice(0, 2).toUpperCase();
 
+  const allowedRoles: AppRole[] = ["admin"];
+
   return (
-    <RoleGuard allow={["admin"]}>
-    <div className="min-h-screen flex w-full">
+    <RoleGuard allow={allowedRoles}>
+      <div className="min-h-screen flex w-full">
       {/* Sidebar */}
       <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-border bg-sidebar">
         <div className="flex items-center gap-2 px-6 py-5 border-b border-sidebar-border">
