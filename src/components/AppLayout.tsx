@@ -9,6 +9,7 @@ import {
   Sparkles,
   Activity,
   UserCog,
+  Plug,
   Bell,
   Search,
   LogOut,
@@ -24,6 +25,7 @@ const navItems = [
   { to: "/campanhas", label: "Campanhas", icon: Megaphone },
   { to: "/financeiro", label: "Financeiro", icon: Wallet },
   { to: "/insights", label: "Insights", icon: Sparkles },
+  { to: "/integracoes/meta", label: "Meta Ads", icon: Plug },
   { to: "/admin/usuarios", label: "Usuários", icon: UserCog },
 ] as const;
 
