@@ -6,12 +6,19 @@ import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
 function createSupabaseAdminClient() {
-  const SUPABASE_URL = process.env.SUPABASE_URL;
-  const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  // Try multiple sources: process.env (Node/Worker prod), import.meta.env (Vite dev)
+  const SUPABASE_URL =
+    process.env.SUPABASE_URL ||
+    process.env.VITE_SUPABASE_URL ||
+    (import.meta as any).env?.SUPABASE_URL ||
+    (import.meta as any).env?.VITE_SUPABASE_URL;
+  const SUPABASE_SERVICE_ROLE_KEY =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    (import.meta as any).env?.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error(
-      'Missing Supabase server environment variables. Ensure SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set.'
+      `Missing Supabase server environment variables. URL=${!!SUPABASE_URL} KEY=${!!SUPABASE_SERVICE_ROLE_KEY}`
     );
   }
 
