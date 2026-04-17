@@ -8,6 +8,7 @@ import {
   Wallet,
   Sparkles,
   Activity,
+  UserCog,
   Bell,
   Search,
   LogOut,
@@ -23,6 +24,7 @@ const navItems = [
   { to: "/campanhas", label: "Campanhas", icon: Megaphone },
   { to: "/financeiro", label: "Financeiro", icon: Wallet },
   { to: "/insights", label: "Insights", icon: Sparkles },
+  { to: "/admin/usuarios", label: "Usuários", icon: UserCog },
 ] as const;
 
 export function AppLayout({ children }: { children: ReactNode }) {

@@ -19,6 +19,7 @@ import { Route as CampanhasRouteImport } from './routes/campanhas'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ClientesIdRouteImport } from './routes/clientes.$id'
+import { Route as AdminUsuariosRouteImport } from './routes/admin.usuarios'
 
 const SetupRoute = SetupRouteImport.update({
   id: '/setup',
@@ -70,6 +71,11 @@ const ClientesIdRoute = ClientesIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => ClientesRoute,
 } as any)
+const AdminUsuariosRoute = AdminUsuariosRouteImport.update({
+  id: '/admin/usuarios',
+  path: '/admin/usuarios',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -81,6 +87,7 @@ export interface FileRoutesByFullPath {
   '/meu-painel': typeof MeuPainelRoute
   '/relatorios': typeof RelatoriosRoute
   '/setup': typeof SetupRoute
+  '/admin/usuarios': typeof AdminUsuariosRoute
   '/clientes/$id': typeof ClientesIdRoute
 }
 export interface FileRoutesByTo {
@@ -93,6 +100,7 @@ export interface FileRoutesByTo {
   '/meu-painel': typeof MeuPainelRoute
   '/relatorios': typeof RelatoriosRoute
   '/setup': typeof SetupRoute
+  '/admin/usuarios': typeof AdminUsuariosRoute
   '/clientes/$id': typeof ClientesIdRoute
 }
 export interface FileRoutesById {
@@ -106,6 +114,7 @@ export interface FileRoutesById {
   '/meu-painel': typeof MeuPainelRoute
   '/relatorios': typeof RelatoriosRoute
   '/setup': typeof SetupRoute
+  '/admin/usuarios': typeof AdminUsuariosRoute
   '/clientes/$id': typeof ClientesIdRoute
 }
 export interface FileRouteTypes {
@@ -120,6 +129,7 @@ export interface FileRouteTypes {
     | '/meu-painel'
     | '/relatorios'
     | '/setup'
+    | '/admin/usuarios'
     | '/clientes/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -132,6 +142,7 @@ export interface FileRouteTypes {
     | '/meu-painel'
     | '/relatorios'
     | '/setup'
+    | '/admin/usuarios'
     | '/clientes/$id'
   id:
     | '__root__'
@@ -144,6 +155,7 @@ export interface FileRouteTypes {
     | '/meu-painel'
     | '/relatorios'
     | '/setup'
+    | '/admin/usuarios'
     | '/clientes/$id'
   fileRoutesById: FileRoutesById
 }
@@ -157,6 +169,7 @@ export interface RootRouteChildren {
   MeuPainelRoute: typeof MeuPainelRoute
   RelatoriosRoute: typeof RelatoriosRoute
   SetupRoute: typeof SetupRoute
+  AdminUsuariosRoute: typeof AdminUsuariosRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -231,6 +244,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientesIdRouteImport
       parentRoute: typeof ClientesRoute
     }
+    '/admin/usuarios': {
+      id: '/admin/usuarios'
+      path: '/admin/usuarios'
+      fullPath: '/admin/usuarios'
+      preLoaderRoute: typeof AdminUsuariosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -256,7 +276,17 @@ const rootRouteChildren: RootRouteChildren = {
   MeuPainelRoute: MeuPainelRoute,
   RelatoriosRoute: RelatoriosRoute,
   SetupRoute: SetupRoute,
+  AdminUsuariosRoute: AdminUsuariosRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
