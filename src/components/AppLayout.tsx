@@ -1,4 +1,4 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import {
   LayoutDashboard,
@@ -10,8 +10,11 @@ import {
   Activity,
   Bell,
   Search,
+  LogOut,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/contexts/AuthContext";
+import { RoleGuard } from "@/components/RoleGuard";
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -24,8 +27,18 @@ const navItems = [
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const { location } = useRouterState();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  async function handleLogout() {
+    await signOut();
+    navigate({ to: "/auth" });
+  }
+
+  const initials = (user?.email ?? "AD").slice(0, 2).toUpperCase();
 
   return (
+    <RoleGuard allow={["admin"]}>
     <div className="min-h-screen flex w-full">
       {/* Sidebar */}
       <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-border bg-sidebar">
@@ -104,12 +117,21 @@ export function AppLayout({ children }: { children: ReactNode }) {
             </button>
             <div className="flex items-center gap-2 pl-2">
               <div className="h-9 w-9 rounded-full bg-[image:var(--gradient-primary)] flex items-center justify-center text-sm font-semibold text-primary-foreground">
-                LV
+                {initials}
               </div>
               <div className="hidden sm:block">
-                <p className="text-xs font-medium leading-tight">Lucas Viana</p>
+                <p className="text-xs font-medium leading-tight truncate max-w-[140px]">
+                  {user?.email ?? "—"}
+                </p>
                 <p className="text-[10px] text-muted-foreground">Admin</p>
               </div>
+              <button
+                onClick={handleLogout}
+                title="Sair"
+                className="ml-1 h-9 w-9 rounded-lg border border-border bg-secondary/40 flex items-center justify-center hover:bg-secondary transition"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
             </div>
           </div>
         </header>
@@ -140,5 +162,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
         <main className="flex-1 p-4 md:p-8">{children}</main>
       </div>
     </div>
+    </RoleGuard>
   );
 }
