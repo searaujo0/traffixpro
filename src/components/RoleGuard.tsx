@@ -19,18 +19,23 @@ export function RoleGuard({
       navigate({ to: "/auth" });
       return;
     }
-    if (role && !allow.includes(role)) {
+    if (!role) {
+      // autenticado, mas sem role atribuída → bootstrap/setup
+      navigate({ to: "/setup" });
+      return;
+    }
+    if (!allow.includes(role)) {
       navigate({ to: role === "admin" ? "/" : "/meu-painel" });
     }
   }, [user, role, loading]);
 
-  if (loading || !user || !role) {
+  if (loading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
-  if (!allow.includes(role)) return null;
+  if (!role || !allow.includes(role)) return null;
   return <>{children}</>;
 }

@@ -23,9 +23,9 @@ function AuthPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!loading && user && role) {
-      navigate({ to: role === "admin" ? "/" : "/meu-painel" });
-    }
+    if (loading || !user) return;
+    if (!role) navigate({ to: "/setup" });
+    else navigate({ to: role === "admin" ? "/" : "/meu-painel" });
   }, [user, role, loading, navigate]);
 
   async function handleSubmit(e: FormEvent) {
