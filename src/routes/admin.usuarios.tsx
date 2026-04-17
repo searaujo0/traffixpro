@@ -75,10 +75,16 @@ function UsuariosPage() {
 
   async function load() {
     setLoading(true);
-    const res = await callList();
-    if (res.error) toast.error(res.error);
-    else setUsers(res.users);
-    setLoading(false);
+    try {
+      const res = await callList();
+      if (res?.error) toast.error(res.error);
+      setUsers(res?.users ?? []);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Falha ao carregar usuários");
+      setUsers([]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
