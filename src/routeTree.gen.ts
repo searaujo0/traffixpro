@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SetupRouteImport } from './routes/setup'
 import { Route as RelatoriosRouteImport } from './routes/relatorios'
 import { Route as MeuPainelRouteImport } from './routes/meu-painel'
 import { Route as InsightsRouteImport } from './routes/insights'
@@ -19,6 +20,11 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ClientesIdRouteImport } from './routes/clientes.$id'
 
+const SetupRoute = SetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RelatoriosRoute = RelatoriosRouteImport.update({
   id: '/relatorios',
   path: '/relatorios',
@@ -74,6 +80,7 @@ export interface FileRoutesByFullPath {
   '/insights': typeof InsightsRoute
   '/meu-painel': typeof MeuPainelRoute
   '/relatorios': typeof RelatoriosRoute
+  '/setup': typeof SetupRoute
   '/clientes/$id': typeof ClientesIdRoute
 }
 export interface FileRoutesByTo {
@@ -85,6 +92,7 @@ export interface FileRoutesByTo {
   '/insights': typeof InsightsRoute
   '/meu-painel': typeof MeuPainelRoute
   '/relatorios': typeof RelatoriosRoute
+  '/setup': typeof SetupRoute
   '/clientes/$id': typeof ClientesIdRoute
 }
 export interface FileRoutesById {
@@ -97,6 +105,7 @@ export interface FileRoutesById {
   '/insights': typeof InsightsRoute
   '/meu-painel': typeof MeuPainelRoute
   '/relatorios': typeof RelatoriosRoute
+  '/setup': typeof SetupRoute
   '/clientes/$id': typeof ClientesIdRoute
 }
 export interface FileRouteTypes {
@@ -110,6 +119,7 @@ export interface FileRouteTypes {
     | '/insights'
     | '/meu-painel'
     | '/relatorios'
+    | '/setup'
     | '/clientes/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -121,6 +131,7 @@ export interface FileRouteTypes {
     | '/insights'
     | '/meu-painel'
     | '/relatorios'
+    | '/setup'
     | '/clientes/$id'
   id:
     | '__root__'
@@ -132,6 +143,7 @@ export interface FileRouteTypes {
     | '/insights'
     | '/meu-painel'
     | '/relatorios'
+    | '/setup'
     | '/clientes/$id'
   fileRoutesById: FileRoutesById
 }
@@ -144,10 +156,18 @@ export interface RootRouteChildren {
   InsightsRoute: typeof InsightsRoute
   MeuPainelRoute: typeof MeuPainelRoute
   RelatoriosRoute: typeof RelatoriosRoute
+  SetupRoute: typeof SetupRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/setup': {
+      id: '/setup'
+      path: '/setup'
+      fullPath: '/setup'
+      preLoaderRoute: typeof SetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/relatorios': {
       id: '/relatorios'
       path: '/relatorios'
@@ -235,6 +255,7 @@ const rootRouteChildren: RootRouteChildren = {
   InsightsRoute: InsightsRoute,
   MeuPainelRoute: MeuPainelRoute,
   RelatoriosRoute: RelatoriosRoute,
+  SetupRoute: SetupRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
