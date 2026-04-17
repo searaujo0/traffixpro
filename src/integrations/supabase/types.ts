@@ -14,6 +14,107 @@ export type Database = {
   }
   public: {
     Tables: {
+      ad_accounts: {
+        Row: {
+          business_name: string | null
+          client_id: string | null
+          connection_id: string
+          created_at: string
+          currency: string | null
+          id: string
+          name: string
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          business_name?: string | null
+          client_id?: string | null
+          connection_id: string
+          created_at?: string
+          currency?: string | null
+          id: string
+          name: string
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          business_name?: string | null
+          client_id?: string | null
+          connection_id?: string
+          created_at?: string
+          currency?: string | null
+          id?: string
+          name?: string
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_accounts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_accounts_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "meta_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ad_insights: {
+        Row: {
+          ad_account_id: string
+          clicks: number
+          conversions: number
+          created_at: string
+          ctr: number
+          date: string
+          id: string
+          impressions: number
+          raw: Json | null
+          reach: number
+          spend: number
+        }
+        Insert: {
+          ad_account_id: string
+          clicks?: number
+          conversions?: number
+          created_at?: string
+          ctr?: number
+          date: string
+          id?: string
+          impressions?: number
+          raw?: Json | null
+          reach?: number
+          spend?: number
+        }
+        Update: {
+          ad_account_id?: string
+          clicks?: number
+          conversions?: number
+          created_at?: string
+          ctr?: number
+          date?: string
+          id?: string
+          impressions?: number
+          raw?: Json | null
+          reach?: number
+          spend?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_insights_ad_account_id_fkey"
+            columns: ["ad_account_id"]
+            isOneToOne: false
+            referencedRelation: "ad_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaigns: {
         Row: {
           clicks: number
@@ -88,6 +189,39 @@ export type Database = {
           owner_user_id?: string | null
           segment?: string | null
           status?: string
+        }
+        Relationships: []
+      }
+      meta_connections: {
+        Row: {
+          access_token: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          meta_user_id: string
+          meta_user_name: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          meta_user_id: string
+          meta_user_name?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          meta_user_id?: string
+          meta_user_name?: string | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
