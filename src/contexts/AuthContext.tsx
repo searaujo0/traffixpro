@@ -27,6 +27,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(sess);
       setUser(sess?.user ?? null);
       if (sess?.user) {
+        setRole(null);
+        setLoading(true);
         // diferir chamada async para evitar deadlock
         setTimeout(() => {
           fetchRole(sess.user.id).finally(() => setLoading(false));
@@ -40,8 +42,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(({ data: { session: sess } }) => {
       setSession(sess);
       setUser(sess?.user ?? null);
-      if (sess?.user) fetchRole(sess.user.id).finally(() => setLoading(false));
-      else setLoading(false);
+      if (sess?.user) {
+        setRole(null);
+        setLoading(true);
+        fetchRole(sess.user.id).finally(() => setLoading(false));
+      } else {
+        setRole(null);
+        setLoading(false);
+      }
     });
 
     return () => sub.subscription.unsubscribe();
