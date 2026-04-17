@@ -64,23 +64,9 @@ function SetupPage() {
       }
     }
 
-    // Re-checa: se já existe admin (corrida), cancela
-    const { count } = await supabase
-      .from("user_roles")
-      .select("*", { count: "exact", head: true })
-      .eq("role", "admin");
-    if ((count ?? 0) > 0) {
-      setError("Setup já foi concluído por outro usuário.");
-      setSubmitting(false);
-      return;
-    }
-
-    const { error: roleError } = await supabase
-      .from("user_roles")
-      .insert({ user_id: signUpData.user.id, role: "admin" });
-
-    if (roleError) {
-      setError(`Conta criada, mas falhou ao atribuir admin: ${roleError.message}`);
+    const { error: rpcError } = await supabase.rpc("bootstrap_first_admin");
+    if (rpcError) {
+      setError(`Falha ao atribuir admin: ${rpcError.message}`);
       setSubmitting(false);
       return;
     }
