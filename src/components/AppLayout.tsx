@@ -13,7 +13,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth, type AppRole } from "@/contexts/AuthContext";
 import { RoleGuard } from "@/components/RoleGuard";
 
 const navItems = [
