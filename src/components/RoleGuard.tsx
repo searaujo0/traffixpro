@@ -22,7 +22,7 @@ export function RoleGuard({
     if (role && !allow.includes(role)) {
       navigate({ to: role === "admin" ? "/" : "/meu-painel" });
     }
-  }, [user, role, loading, allow, navigate]);
+  }, [user, role, loading]);
 
   if (loading || !user || !role) {
     return (
