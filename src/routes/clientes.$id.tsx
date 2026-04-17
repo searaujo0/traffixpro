@@ -174,7 +174,7 @@ function ClientReport({
         <KpiCard label="Faturamento" value={brl(m.revenue)} icon={Wallet} accent="primary" />
         <KpiCard label="ROI" value={pct(m.roi)} icon={TrendingUp} accent="success" />
         <KpiCard label="Investimento" value={brl(m.spend)} icon={Target} />
-        <KpiCard label="Vendas" value={num(m.sales)} icon={ShoppingBag} accent="accent" />
+        <KpiCard label="Vendas" value={num(m.sales)} icon={ShoppingBag} accent="warning" />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
