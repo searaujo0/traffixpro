@@ -4,11 +4,24 @@ import { getRequest } from '@tanstack/react-start/server'
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from './types'
 
-
-
-export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server(
-  async ({ next }) => {
-    
+export const requireSupabaseAuth = createMiddleware({ type: 'function' })
+  .client(async ({ next }) => {
+    // Attach the current Supabase access token to the server fn request.
+    let token: string | null = null;
+    if (typeof window !== 'undefined') {
+      try {
+        const { supabase } = await import('./client');
+        const { data } = await supabase.auth.getSession();
+        token = data.session?.access_token ?? null;
+      } catch {
+        // ignore
+      }
+    }
+    return next({
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+  })
+  .server(async ({ next }) => {
     const SUPABASE_URL = process.env.SUPABASE_URL;
     const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
 
@@ -18,7 +31,7 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
         { status: 500 }
       );
     }
-    
+
     const request = getRequest();
 
     if (!request?.headers) {
@@ -73,5 +86,4 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
         claims: data.claims,
       },
     })
-  }
-)
+  });
