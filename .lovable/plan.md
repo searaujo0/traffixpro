@@ -1,54 +1,37 @@
 
 
-O usuário (admin) não consegue se cadastrar porque a tela `/auth` só tem login — não há signup, e a decisão arquitetural foi "só Admin convida" (sem cadastro público). Isso cria um problema de bootstrap: não existe nenhum admin ainda, então ninguém pode convidar ninguém.
+O bootstrap do admin está funcionando. Agora o sistema tem:
+- `/setup` (bloqueado após primeiro admin)
+- `/auth` (login)
+- Admin pode criar clientes e gerar acessos em `/clientes`
+- Cliente loga e vai pra `/meu-painel`
 
-## Solução proposta: Bootstrap do primeiro admin
+## Próximos passos sugeridos (escolha um)
 
-Crio uma rota `/setup` pública que só funciona **enquanto não houver nenhum admin no sistema**. Depois que o primeiro admin for criado, ela trava automaticamente e redireciona para `/auth`.
+**Opção A — Página de gestão de usuários** (`/admin/usuarios`)
+Hoje você só consegue criar acesso de cliente pelo card em `/clientes`. Não tem como:
+- Listar todos os usuários do sistema
+- Ver quem é admin / quem é cliente
+- Promover um cliente a admin (ou vice-versa)
+- Resetar senha de alguém
+- Remover acesso
 
-### Como vai funcionar
+Construo uma página simples no menu admin com tabela de usuários + ações (mudar role, enviar reset de senha, deletar). Usa server functions com service_role pra não esbarrar em RLS.
 
-1. Você acessa `/setup`
-2. Preenche email + senha
-3. O sistema:
-   - Cria a conta via `supabase.auth.signUp`
-   - Insere `role = 'admin'` em `user_roles` para esse usuário
-   - Faz login automático
-   - Redireciona para `/` (dashboard admin)
-4. Próximos acessos a `/setup` mostram "Setup já concluído" e mandam para `/auth`
+**Opção B — Recuperação de senha**
+Fluxo `/forgot-password` → email com link → `/reset-password`. Útil quando um cliente esquecer a senha temporária que você definiu.
 
-### Mudanças necessárias
+**Opção C — Reforço de segurança**
+- Ativar HIBP (bloqueia senhas vazadas em vazamentos públicos)
+- Desativar signup público no Supabase (agora que o admin já existe, ninguém mais precisa se cadastrar — só via convite do admin)
+- Opcional: travar a rota `/setup` definitivamente
 
-**1. Configuração de Auth (Lovable Cloud)**
-- Ativar auto-confirm de email (caso contrário você precisa clicar em link no email antes de logar — atrito desnecessário no bootstrap)
+**Opção D — Melhorias funcionais no produto** (fora de auth)
+Ex: relatórios PDF, gráficos no painel do cliente, notificações, etc. — depende do que você quer priorizar no negócio.
 
-**2. Nova rota `src/routes/setup.tsx`**
-- Verifica se já existe algum admin via `select count from user_roles where role='admin'`
-- Se sim → tela "já configurado" + link para `/auth`
-- Se não → formulário email/senha → signUp → insert role admin → signIn → redirect `/`
+## Minha recomendação
 
-**3. Como criar **outros usuários** depois (clientes e novos admins)**
-   - Como decidimos "só Admin convida", o admin precisa de uma UI para criar contas. Proponho uma seção simples em `/clientes`:
-     - Botão "Criar acesso" no card de cada cliente
-     - Modal pede email + senha temporária
-     - Cria o usuário (`signUp`), insere `role='cliente'` em `user_roles`, e atualiza `clients.owner_user_id`
-   - **Limitação técnica:** `supabase.auth.signUp` desloga o admin atual e loga o novo usuário. Para evitar isso de forma limpa, o ideal seria uma Edge Function usando `service_role` que cria o usuário sem afetar a sessão. Incluo isso no plano.
+Faria nesta ordem: **C (rápido, fecha brechas) → A (te dá controle total) → B (qualidade de vida)**.
 
-### Escopo desta entrega
-
-1. Rota `/setup` para criar o primeiro admin (resolve o bloqueio imediato)
-2. Auto-confirm de email ativado
-3. Edge Function `admin-create-user` (usa service role) — chamada por uma UI em `/clientes` para criar contas de cliente sem deslogar o admin
-4. Botão "Criar login" nos cards de cliente em `/clientes.tsx` que chama essa função e vincula `owner_user_id`
-
-### Arquivos afetados
-
-- **Criar** `src/routes/setup.tsx`
-- **Criar** `supabase/functions/admin-create-user/index.ts` (+ entrada no `supabase/config.toml`)
-- **Editar** `src/routes/clientes.tsx` — adicionar modal "Criar acesso do cliente"
-- **Configurar** auto-confirm via tool de auth
-
-### Observação sobre comunicação
-
-Após criar o primeiro admin via `/setup`, recomendo (opcional) remover/proteger essa rota em produção, mas como ela já se auto-trava quando existe admin, é seguro deixar.
+Qual você quer atacar primeiro?
 
