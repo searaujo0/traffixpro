@@ -1,4 +1,5 @@
-import { Link, Outlet, useRouterState } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 import {
   LayoutDashboard,
   FileBarChart,
@@ -21,7 +22,7 @@ const navItems = [
   { to: "/insights", label: "Insights", icon: Sparkles },
 ] as const;
 
-export function AppLayout() {
+export function AppLayout({ children }: { children: ReactNode }) {
   const { location } = useRouterState();
 
   return (
@@ -136,9 +137,7 @@ export function AppLayout() {
           })}
         </nav>
 
-        <main className="flex-1 p-4 md:p-8">
-          <Outlet />
-        </main>
+        <main className="flex-1 p-4 md:p-8">{children}</main>
       </div>
     </div>
   );
