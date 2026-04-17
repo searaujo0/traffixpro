@@ -1,12 +1,21 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { AppLayout } from "@/components/AppLayout";
 import { brl } from "@/lib/format";
-import { Plus, ExternalLink, Loader2 } from "lucide-react";
+import { Plus, ExternalLink, Loader2, KeyRound, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { aggregate, fetchCampaigns, fetchSales, type ClientRow } from "@/lib/data";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { createClientUser } from "@/server/admin-users";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/clientes")({
   head: () => ({
@@ -27,10 +36,39 @@ function ClientesPage() {
   const [name, setName] = useState("");
   const [segment, setSegment] = useState("");
   const [ownerEmail, setOwnerEmail] = useState("");
+  const [accessClient, setAccessClient] = useState<Row | null>(null);
+  const [accessEmail, setAccessEmail] = useState("");
+  const [accessPassword, setAccessPassword] = useState("");
+  const [accessSubmitting, setAccessSubmitting] = useState(false);
+  const createUserFn = useServerFn(createClientUser);
 
   useEffect(() => {
     void load();
   }, []);
+
+  async function handleCreateAccess(e: React.FormEvent) {
+    e.preventDefault();
+    if (!accessClient) return;
+    setAccessSubmitting(true);
+    try {
+      const res = await createUserFn({
+        data: { email: accessEmail, password: accessPassword, clientId: accessClient.id },
+      });
+      if (res.error) {
+        toast.error(res.error);
+      } else {
+        toast.success("Acesso criado e vinculado ao cliente");
+        setAccessClient(null);
+        setAccessEmail("");
+        setAccessPassword("");
+        void load();
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao criar acesso");
+    } finally {
+      setAccessSubmitting(false);
+    }
+  }
 
   async function load() {
     setLoading(true);
@@ -164,17 +202,77 @@ function ClientesPage() {
                   </div>
                 </div>
 
-                <Link
-                  to="/clientes/$id"
-                  params={{ id: c.id }}
-                  className="mt-4 w-full inline-flex items-center justify-center gap-2 text-xs font-medium text-primary hover:underline"
-                >
-                  Ver relatório <ExternalLink className="h-3 w-3" />
-                </Link>
+                <div className="mt-4 flex items-center gap-2">
+                  <Link
+                    to="/clientes/$id"
+                    params={{ id: c.id }}
+                    className="flex-1 inline-flex items-center justify-center gap-2 text-xs font-medium text-primary hover:underline"
+                  >
+                    Ver relatório <ExternalLink className="h-3 w-3" />
+                  </Link>
+                  {c.owner_user_id ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] text-success">
+                      <Check className="h-3 w-3" /> Acesso ativo
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setAccessClient(c);
+                        setAccessEmail("");
+                        setAccessPassword("");
+                      }}
+                      className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+                    >
+                      <KeyRound className="h-3 w-3" /> Criar acesso
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
         )}
+
+        <Dialog open={!!accessClient} onOpenChange={(o) => !o && setAccessClient(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Criar acesso do cliente</DialogTitle>
+              <DialogDescription>
+                {accessClient?.name} poderá acessar o painel com este email e senha.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleCreateAccess} className="space-y-3">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Email</label>
+                <Input
+                  type="email"
+                  value={accessEmail}
+                  onChange={(e) => setAccessEmail(e.target.value)}
+                  required
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Senha temporária</label>
+                <Input
+                  type="text"
+                  value={accessPassword}
+                  onChange={(e) => setAccessPassword(e.target.value)}
+                  minLength={6}
+                  required
+                  className="mt-1"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={accessSubmitting}
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition disabled:opacity-50"
+              >
+                {accessSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                Criar acesso
+              </button>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );
