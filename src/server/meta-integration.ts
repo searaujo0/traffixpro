@@ -1,6 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { z } from "zod";
 
 const GRAPH = "https://graph.facebook.com/v21.0";
@@ -83,7 +82,7 @@ export const finishMetaConnection = createServerFn({ method: "POST" })
     if (!me.id) return { ok: false, error: "Não consegui ler /me da Graph API" };
 
     // 4) upsert conexão
-    const { error: upsertErr } = await supabaseAdmin
+    const { error: upsertErr } = await context.supabase
       .from("meta_connections" as any)
       .upsert(
         {
@@ -105,7 +104,7 @@ export const finishMetaConnection = createServerFn({ method: "POST" })
 export const listMetaConnections = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data: connections } = await supabaseAdmin
+    const { data: connections } = await context.supabase
       .from("meta_connections" as any)
       .select("id, meta_user_id, meta_user_name, expires_at, created_at")
       .eq("user_id", context.userId)
@@ -114,7 +113,7 @@ export const listMetaConnections = createServerFn({ method: "GET" })
     const ids = (connections || []).map((c: any) => c.id);
     let accounts: any[] = [];
     if (ids.length) {
-      const { data } = await supabaseAdmin
+      const { data } = await context.supabase
         .from("ad_accounts" as any)
         .select("id, name, currency, status, business_name, client_id, connection_id")
         .in("connection_id", ids);
@@ -130,7 +129,7 @@ export const importAdAccounts = createServerFn({ method: "POST" })
     z.object({ connectionId: z.string().uuid() }).parse(d)
   )
   .handler(async ({ data, context }) => {
-    const { data: conn } = await supabaseAdmin
+    const { data: conn } = await context.supabase
       .from("meta_connections" as any)
       .select("id, user_id, access_token")
       .eq("id", data.connectionId)
@@ -157,7 +156,7 @@ export const importAdAccounts = createServerFn({ method: "POST" })
     }));
 
     if (rows.length) {
-      const { error } = await supabaseAdmin
+      const { error } = await context.supabase
         .from("ad_accounts" as any)
         .upsert(rows, { onConflict: "id" });
       if (error) return { ok: false, error: error.message, count: 0 };
@@ -175,7 +174,7 @@ export const linkAdAccountToClient = createServerFn({ method: "POST" })
     }).parse(d)
   )
   .handler(async ({ data }) => {
-    const { error } = await supabaseAdmin
+    const { error } = await context.supabase
       .from("ad_accounts" as any)
       .update({ client_id: data.clientId, updated_at: new Date().toISOString() })
       .eq("id", data.adAccountId);
@@ -193,7 +192,7 @@ export const syncInsights = createServerFn({ method: "POST" })
     }).parse(d)
   )
   .handler(async ({ data, context }) => {
-    const { data: acc } = await supabaseAdmin
+    const { data: acc } = await context.supabase
       .from("ad_accounts" as any)
       .select("id, connection_id, meta_connections!inner(user_id, access_token)")
       .eq("id", data.adAccountId)
@@ -238,7 +237,7 @@ export const syncInsights = createServerFn({ method: "POST" })
     });
 
     if (rows.length) {
-      const { error } = await supabaseAdmin
+      const { error } = await context.supabase
         .from("ad_insights" as any)
         .upsert(rows, { onConflict: "ad_account_id,date" });
       if (error) return { ok: false, error: error.message, count: 0 };
