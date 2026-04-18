@@ -47,10 +47,13 @@ function MetaIntegrationPage() {
   async function load() {
     setLoading(true);
     try {
-      const [r, c] = await Promise.all([list(), fetchClients()]);
-      setConnections((r as any).connections);
-      setAccounts((r as any).accounts);
-      setClients(c);
+      const [r, c] = await Promise.all([
+        list().catch(() => ({ connections: [], accounts: [] })),
+        fetchClients().catch(() => []),
+      ]);
+      setConnections(((r as any)?.connections ?? []) as Connection[]);
+      setAccounts(((r as any)?.accounts ?? []) as AdAccount[]);
+      setClients(c ?? []);
     } catch (e: any) {
       toast.error(e?.message ?? "Erro ao carregar");
     } finally {
