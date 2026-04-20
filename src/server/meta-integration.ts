@@ -173,7 +173,7 @@ export const linkAdAccountToClient = createServerFn({ method: "POST" })
       clientId: z.string().uuid().nullable(),
     }).parse(d)
   )
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("ad_accounts" as any)
       .update({ client_id: data.clientId, updated_at: new Date().toISOString() })
