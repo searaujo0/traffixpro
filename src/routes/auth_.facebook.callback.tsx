@@ -17,7 +17,7 @@ export const Route = createFileRoute("/auth_/facebook/callback")({
 });
 
 function FacebookCallback() {
-  const search = useSearch({ from: "/auth/facebook/callback" });
+  const search = useSearch({ from: "/auth_/facebook/callback" });
   const navigate = useNavigate();
   const finish = useServerFn(finishMetaConnection);
   const [msg, setMsg] = useState("Finalizando conexão com o Facebook...");
