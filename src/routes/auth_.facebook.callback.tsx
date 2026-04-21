@@ -5,7 +5,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { finishMetaConnection } from "@/server/meta-integration";
 
-export const Route = createFileRoute("/auth/facebook/callback")({
+export const Route = createFileRoute("/auth_/facebook/callback")({
   validateSearch: (s: Record<string, unknown>) => ({
     code: typeof s.code === "string" ? s.code : undefined,
     state: typeof s.state === "string" ? s.state : undefined,
@@ -17,7 +17,7 @@ export const Route = createFileRoute("/auth/facebook/callback")({
 });
 
 function FacebookCallback() {
-  const search = useSearch({ from: "/auth/facebook/callback" });
+  const search = useSearch({ from: "/auth_/facebook/callback" });
   const navigate = useNavigate();
   const finish = useServerFn(finishMetaConnection);
   const [msg, setMsg] = useState("Finalizando conexão com o Facebook...");
