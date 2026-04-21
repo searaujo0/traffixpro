@@ -5,7 +5,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { finishMetaConnection } from "@/server/meta-integration";
 
-export const Route = createFileRoute("/auth/facebook/callback")({
+export const Route = createFileRoute("/auth_/facebook/callback")({
   validateSearch: (s: Record<string, unknown>) => ({
     code: typeof s.code === "string" ? s.code : undefined,
     state: typeof s.state === "string" ? s.state : undefined,

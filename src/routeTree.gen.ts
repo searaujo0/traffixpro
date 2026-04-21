@@ -21,7 +21,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as IntegracoesMetaRouteImport } from './routes/integracoes.meta'
 import { Route as ClientesIdRouteImport } from './routes/clientes.$id'
 import { Route as AdminUsuariosRouteImport } from './routes/admin.usuarios'
-import { Route as AuthFacebookCallbackRouteImport } from './routes/auth.facebook.callback'
+import { Route as AuthFacebookCallbackRouteImport } from './routes/auth_.facebook.callback'
 
 const SetupRoute = SetupRouteImport.update({
   id: '/setup',
@@ -84,14 +84,14 @@ const AdminUsuariosRoute = AdminUsuariosRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthFacebookCallbackRoute = AuthFacebookCallbackRouteImport.update({
-  id: '/facebook/callback',
-  path: '/facebook/callback',
-  getParentRoute: () => AuthRoute,
+  id: '/auth_/facebook/callback',
+  path: '/auth/facebook/callback',
+  getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/auth': typeof AuthRouteWithChildren
+  '/auth': typeof AuthRoute
   '/campanhas': typeof CampanhasRoute
   '/clientes': typeof ClientesRouteWithChildren
   '/financeiro': typeof FinanceiroRoute
@@ -106,7 +106,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/auth': typeof AuthRouteWithChildren
+  '/auth': typeof AuthRoute
   '/campanhas': typeof CampanhasRoute
   '/clientes': typeof ClientesRouteWithChildren
   '/financeiro': typeof FinanceiroRoute
@@ -122,7 +122,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/auth': typeof AuthRouteWithChildren
+  '/auth': typeof AuthRoute
   '/campanhas': typeof CampanhasRoute
   '/clientes': typeof ClientesRouteWithChildren
   '/financeiro': typeof FinanceiroRoute
@@ -133,7 +133,7 @@ export interface FileRoutesById {
   '/admin/usuarios': typeof AdminUsuariosRoute
   '/clientes/$id': typeof ClientesIdRoute
   '/integracoes/meta': typeof IntegracoesMetaRoute
-  '/auth/facebook/callback': typeof AuthFacebookCallbackRoute
+  '/auth_/facebook/callback': typeof AuthFacebookCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -180,12 +180,12 @@ export interface FileRouteTypes {
     | '/admin/usuarios'
     | '/clientes/$id'
     | '/integracoes/meta'
-    | '/auth/facebook/callback'
+    | '/auth_/facebook/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AuthRoute: typeof AuthRouteWithChildren
+  AuthRoute: typeof AuthRoute
   CampanhasRoute: typeof CampanhasRoute
   ClientesRoute: typeof ClientesRouteWithChildren
   FinanceiroRoute: typeof FinanceiroRoute
@@ -195,6 +195,7 @@ export interface RootRouteChildren {
   SetupRoute: typeof SetupRoute
   AdminUsuariosRoute: typeof AdminUsuariosRoute
   IntegracoesMetaRoute: typeof IntegracoesMetaRoute
+  AuthFacebookCallbackRoute: typeof AuthFacebookCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -283,25 +284,15 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminUsuariosRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/auth/facebook/callback': {
-      id: '/auth/facebook/callback'
-      path: '/facebook/callback'
+    '/auth_/facebook/callback': {
+      id: '/auth_/facebook/callback'
+      path: '/auth/facebook/callback'
       fullPath: '/auth/facebook/callback'
       preLoaderRoute: typeof AuthFacebookCallbackRouteImport
-      parentRoute: typeof AuthRoute
+      parentRoute: typeof rootRouteImport
     }
   }
 }
-
-interface AuthRouteChildren {
-  AuthFacebookCallbackRoute: typeof AuthFacebookCallbackRoute
-}
-
-const AuthRouteChildren: AuthRouteChildren = {
-  AuthFacebookCallbackRoute: AuthFacebookCallbackRoute,
-}
-
-const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 
 interface ClientesRouteChildren {
   ClientesIdRoute: typeof ClientesIdRoute
@@ -317,7 +308,7 @@ const ClientesRouteWithChildren = ClientesRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AuthRoute: AuthRouteWithChildren,
+  AuthRoute: AuthRoute,
   CampanhasRoute: CampanhasRoute,
   ClientesRoute: ClientesRouteWithChildren,
   FinanceiroRoute: FinanceiroRoute,
@@ -327,6 +318,7 @@ const rootRouteChildren: RootRouteChildren = {
   SetupRoute: SetupRoute,
   AdminUsuariosRoute: AdminUsuariosRoute,
   IntegracoesMetaRoute: IntegracoesMetaRoute,
+  AuthFacebookCallbackRoute: AuthFacebookCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
