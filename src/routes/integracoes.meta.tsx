@@ -43,6 +43,7 @@ function MetaIntegrationPage() {
   const [accounts, setAccounts] = useState<AdAccount[]>([]);
   const [clients, setClients] = useState<ClientRow[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
+  const [days, setDays] = useState<number>(30);
 
   async function load() {
     setLoading(true);
@@ -109,9 +110,10 @@ function MetaIntegrationPage() {
   async function handleSync(adAccountId: string) {
     setBusy(adAccountId + ":sync");
     try {
-      const r = await syncFn({ data: { adAccountId, days: 30 } });
+      const r = await syncFn({ data: { adAccountId, days } });
       if (!r.ok) toast.error(r.error ?? "Erro");
       else toast.success(`${r.count} dias sincronizados`);
+      await load();
     } finally {
       setBusy(null);
     }
@@ -139,6 +141,34 @@ function MetaIntegrationPage() {
               {busy === "connect" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Facebook className="h-4 w-4" />}
               <span className="ml-2">Conectar Facebook</span>
             </Button>
+          </div>
+        </Card>
+
+        <Card className="p-5">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <h2 className="font-semibold">Período de sincronização</h2>
+              <p className="text-sm text-muted-foreground">
+                Escolha quantos dias buscar ao clicar em "Sync" em cada conta.
+              </p>
+            </div>
+            <div className="flex p-1 rounded-lg bg-secondary border border-border/60 text-xs">
+              {[
+                { d: 1, l: "Hoje" },
+                { d: 7, l: "7 dias" },
+                { d: 30, l: "30 dias" },
+              ].map((opt) => (
+                <button
+                  key={opt.d}
+                  onClick={() => setDays(opt.d)}
+                  className={`px-3 py-1.5 rounded-md font-medium transition ${
+                    days === opt.d ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {opt.l}
+                </button>
+              ))}
+            </div>
           </div>
         </Card>
 
