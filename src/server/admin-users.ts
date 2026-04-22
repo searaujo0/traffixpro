@@ -6,6 +6,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 const createClientUserSchema = z.object({
   email: z.string().email().max(255),
   password: z.string().min(6).max(128),
+  fullName: z.string().min(1).max(255),
   clientId: z.string().uuid(),
 });
 
@@ -31,12 +32,20 @@ export const createClientUser = createServerFn({ method: "POST" })
       email: data.email,
       password: data.password,
       email_confirm: true,
+      user_metadata: { full_name: data.fullName },
     });
     if (createErr || !created.user) {
       return { error: createErr?.message ?? "Falha ao criar usuário." };
     }
 
     const newUserId = created.user.id;
+
+    // Garante profile com nome (caso o trigger não esteja ativo)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabaseAdmin.from("profiles" as any) as any).upsert(
+      { user_id: newUserId, full_name: data.fullName },
+      { onConflict: "user_id" },
+    );
 
     // Atribui role cliente
     const { error: roleInsertErr } = await supabaseAdmin

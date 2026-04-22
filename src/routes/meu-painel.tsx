@@ -1,35 +1,59 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Activity, LogOut, Loader2, TrendingUp, Wallet, ShoppingBag, Plus } from "lucide-react";
+import {
+  Activity,
+  LogOut,
+  Loader2,
+  TrendingUp,
+  Wallet,
+  ShoppingBag,
+  Plus,
+  Eye,
+  MousePointerClick,
+  Target,
+  RefreshCw,
+} from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { brl, pct } from "@/lib/format";
-import { aggregate, type CampaignRow, type ClientRow, type SaleRow } from "@/lib/data";
+import { brl, brlPrecise, num, pct } from "@/lib/format";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import {
+  fetchDashboard,
+  type DashboardSummary,
+  type Period,
+} from "@/lib/dashboard";
 
 export const Route = createFileRoute("/meu-painel")({
   head: () => ({
     meta: [
       { title: "Meu Painel — TraffixPro" },
-      { name: "description", content: "Acompanhe suas vendas e o retorno das suas campanhas." },
+      { name: "description", content: "Acompanhe suas campanhas, leads e o retorno do investimento." },
     ],
   }),
   component: ClientPanel,
 });
 
+type ClientLite = { id: string; name: string };
+
+const periodLabels: Record<Period, string> = {
+  today: "Hoje",
+  "7d": "7 dias",
+  "30d": "30 dias",
+};
+
 function ClientPanel() {
-  const { user, role, loading, signOut } = useAuth();
+  const { user, profile, role, loading: authLoading, signOut } = useAuth();
   const navigate = useNavigate();
-  const [client, setClient] = useState<ClientRow | null>(null);
-  const [campaigns, setCampaigns] = useState<CampaignRow[]>([]);
-  const [sales, setSales] = useState<SaleRow[]>([]);
+  const [client, setClient] = useState<ClientLite | null>(null);
+  const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [period, setPeriod] = useState<Period>("30d");
   const [busy, setBusy] = useState(true);
   const [qty, setQty] = useState("");
   const [val, setVal] = useState("");
 
   useEffect(() => {
-    if (loading) return;
+    if (authLoading) return;
     if (!user) {
       navigate({ to: "/auth" });
       return;
@@ -38,22 +62,36 @@ function ClientPanel() {
       navigate({ to: "/" });
       return;
     }
-    void load();
-  }, [user, role, loading]);
+    void loadClient();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, role, authLoading]);
 
-  async function load() {
+  useEffect(() => {
+    if (client) void loadMetrics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [client, period]);
+
+  async function loadClient() {
     setBusy(true);
-    const { data: cli } = await supabase.from("clients").select("*").maybeSingle();
-    if (cli) {
-      setClient(cli as ClientRow);
-      const [{ data: camps }, { data: sls }] = await Promise.all([
-        supabase.from("campaigns").select("*").eq("client_id", cli.id),
-        supabase.from("sales").select("*").eq("client_id", cli.id).order("sale_date", { ascending: false }),
-      ]);
-      setCampaigns((camps ?? []) as CampaignRow[]);
-      setSales((sls ?? []) as SaleRow[]);
+    const { data: cli } = await supabase
+      .from("clients")
+      .select("id, name")
+      .maybeSingle();
+    setClient((cli as ClientLite | null) ?? null);
+    if (!cli) setBusy(false);
+  }
+
+  async function loadMetrics() {
+    if (!client) return;
+    setBusy(true);
+    try {
+      const r = await fetchDashboard(period, client.id);
+      setSummary(r.summary);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setBusy(false);
     }
-    setBusy(false);
   }
 
   async function addSale(e: React.FormEvent) {
@@ -74,7 +112,7 @@ function ClientPanel() {
       toast.success("Venda registrada");
       setQty("");
       setVal("");
-      void load();
+      void loadMetrics();
     }
   }
 
@@ -83,7 +121,7 @@ function ClientPanel() {
     navigate({ to: "/auth" });
   }
 
-  if (loading || busy) {
+  if (authLoading || (busy && !summary && client)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -101,7 +139,8 @@ function ClientPanel() {
     );
   }
 
-  const m = aggregate(campaigns, sales);
+  const firstName = profile?.full_name?.trim().split(/\s+/)[0] || "";
+  const m = summary;
 
   return (
     <div className="min-h-screen bg-background">
@@ -123,35 +162,68 @@ function ClientPanel() {
         </button>
       </header>
 
-      <main className="max-w-3xl mx-auto p-4 md:p-8 space-y-6">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-semibold">Olá!</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Aqui está o resumo das suas vendas e o retorno do investimento.
-          </p>
+      <main className="max-w-5xl mx-auto p-4 md:p-8 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-semibold">
+              Olá{firstName ? `, ${firstName}` : ""}!
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              {m?.hasData
+                ? "Aqui está o resumo das suas campanhas e vendas."
+                : "Ainda não há dados — aguarde o gestor sincronizar suas campanhas."}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 text-xs">
+            <div className="flex p-1 rounded-lg bg-secondary border border-border/60">
+              {(["today", "7d", "30d"] as Period[]).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setPeriod(p)}
+                  className={`px-3 py-1.5 rounded-md font-medium transition ${
+                    period === p
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {periodLabels[p]}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={loadMetrics}
+              disabled={busy}
+              className="h-9 w-9 rounded-lg border border-border bg-secondary/40 flex items-center justify-center hover:bg-secondary disabled:opacity-50"
+              title="Atualizar"
+            >
+              <RefreshCw className={`h-4 w-4 ${busy ? "animate-spin" : ""}`} />
+            </button>
+          </div>
         </div>
 
-        {/* 3 KPIs essenciais */}
+        {/* Top KPIs */}
         <div className="grid gap-4 sm:grid-cols-3">
-          <BigKpi
-            icon={Wallet}
-            label="Faturamento"
-            value={brl(m.revenue)}
-            tone="primary"
-          />
-          <BigKpi
-            icon={TrendingUp}
-            label="ROI"
-            value={pct(m.roi)}
-            tone="success"
-          />
-          <BigKpi
-            icon={ShoppingBag}
-            label="Vendas"
-            value={String(m.sales)}
-            tone="accent"
-          />
+          <BigKpi icon={Wallet} label="Faturamento" value={brl(m?.revenue ?? 0)} tone="primary" />
+          <BigKpi icon={TrendingUp} label="ROI" value={pct(m?.roi ?? 0)} tone="success" />
+          <BigKpi icon={ShoppingBag} label="Vendas" value={String(m?.salesCount ?? 0)} tone="accent" />
         </div>
+
+        {/* Meta Ads KPIs */}
+        <section>
+          <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-3">
+            Campanhas — Meta Ads
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <SmallKpi label="Investimento" value={brl(m?.spend ?? 0)} />
+            <SmallKpi label="Leads" value={num(m?.conversions ?? 0)} hint={m?.cpl ? `CPL ${brlPrecise(m.cpl)}` : undefined} />
+            <SmallKpi label="Cliques" value={num(m?.clicks ?? 0)} hint={`CTR ${pct(m?.ctr ?? 0)}`} />
+            <SmallKpi label="Impressões" value={num(m?.impressions ?? 0)} hint={m?.cpm ? `CPM ${brlPrecise(m.cpm)}` : undefined} />
+            <SmallKpi label="ROAS" value={`${(m?.roas ?? 0).toFixed(2).replace(".", ",")}x`} />
+            <SmallKpi label="CPC" value={m?.cpc ? brlPrecise(m.cpc) : "—"} />
+            <SmallKpi label="Custo por venda" value={m?.salesCount ? brlPrecise((m?.spend ?? 0) / m.salesCount) : "—"} />
+            <SmallKpi label="Alcance" value={num(m?.reach ?? 0)} />
+          </div>
+        </section>
 
         {/* Adicionar venda */}
         <form onSubmit={addSale} className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-card)]">
@@ -176,32 +248,6 @@ function ClientPanel() {
             </button>
           </div>
         </form>
-
-        {/* Histórico simples */}
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-card)]">
-          <h2 className="text-base font-semibold mb-4">Últimas vendas</h2>
-          {sales.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhuma venda registrada ainda.</p>
-          ) : (
-            <ul className="divide-y divide-border">
-              {sales.slice(0, 8).map((s) => (
-                <li key={s.id} className="flex items-center justify-between py-2.5">
-                  <div>
-                    <p className="text-sm font-medium">
-                      {s.quantity} × {brl(Number(s.unit_value))}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground">
-                      {new Date(s.sale_date).toLocaleDateString("pt-BR")}
-                    </p>
-                  </div>
-                  <p className="text-sm font-semibold text-success">
-                    {brl(s.quantity * Number(s.unit_value))}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
       </main>
     </div>
   );
@@ -234,3 +280,16 @@ function BigKpi({
     </div>
   );
 }
+
+function SmallKpi({ label, value, hint }: { label: string; value: string; hint?: string }) {
+  return (
+    <div className="rounded-xl border border-border bg-card p-4">
+      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className="text-lg font-semibold mt-1">{value}</p>
+      {hint && <p className="text-[10px] text-muted-foreground mt-0.5">{hint}</p>}
+    </div>
+  );
+}
+
+// Avoid unused import warnings for icons not in lite UI
+void Eye; void MousePointerClick; void Target;

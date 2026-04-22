@@ -38,6 +38,7 @@ function ClientesPage() {
   const [ownerEmail, setOwnerEmail] = useState("");
   const [accessClient, setAccessClient] = useState<Row | null>(null);
   const [accessEmail, setAccessEmail] = useState("");
+  const [accessFullName, setAccessFullName] = useState("");
   const [accessPassword, setAccessPassword] = useState("");
   const [accessSubmitting, setAccessSubmitting] = useState(false);
   const createUserFn = useServerFn(createClientUser);
@@ -52,7 +53,12 @@ function ClientesPage() {
     setAccessSubmitting(true);
     try {
       const res = await createUserFn({
-        data: { email: accessEmail, password: accessPassword, clientId: accessClient.id },
+        data: {
+          email: accessEmail,
+          password: accessPassword,
+          fullName: accessFullName,
+          clientId: accessClient.id,
+        },
       });
       if (res.error) {
         toast.error(res.error);
@@ -60,6 +66,7 @@ function ClientesPage() {
         toast.success("Acesso criado e vinculado ao cliente");
         setAccessClient(null);
         setAccessEmail("");
+        setAccessFullName("");
         setAccessPassword("");
         void load();
       }
@@ -241,6 +248,16 @@ function ClientesPage() {
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleCreateAccess} className="space-y-3">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Nome completo</label>
+                <Input
+                  type="text"
+                  value={accessFullName}
+                  onChange={(e) => setAccessFullName(e.target.value)}
+                  required
+                  className="mt-1"
+                />
+              </div>
               <div>
                 <label className="text-xs font-medium text-muted-foreground">Email</label>
                 <Input

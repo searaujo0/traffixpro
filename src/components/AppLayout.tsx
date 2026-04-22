@@ -31,7 +31,7 @@ const navItems = [
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const { location } = useRouterState();
-  const { user, signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
 
   async function handleLogout() {
@@ -39,7 +39,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
     navigate({ to: "/auth" });
   }
 
-  const initials = (user?.email ?? "AD").slice(0, 2).toUpperCase();
+  const displayName = profile?.full_name?.trim() || user?.email || "Admin";
+  const initials = (profile?.full_name?.trim() || user?.email || "AD")
+    .split(/\s+/)
+    .map((p) => p[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
 
   const allowedRoles: AppRole[] = ["admin"];
 
@@ -127,7 +133,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               </div>
               <div className="hidden sm:block">
                 <p className="text-xs font-medium leading-tight truncate max-w-[140px]">
-                  {user?.email ?? "—"}
+                  {displayName}
                 </p>
                 <p className="text-[10px] text-muted-foreground">Admin</p>
               </div>
