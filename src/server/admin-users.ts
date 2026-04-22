@@ -41,12 +41,11 @@ export const createClientUser = createServerFn({ method: "POST" })
     const newUserId = created.user.id;
 
     // Garante profile com nome (caso o trigger não esteja ativo)
-    await supabaseAdmin
-      .from("profiles" as never)
-      .upsert(
-        { user_id: newUserId, full_name: data.fullName },
-        { onConflict: "user_id" } as never,
-      );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabaseAdmin.from("profiles" as any) as any).upsert(
+      { user_id: newUserId, full_name: data.fullName },
+      { onConflict: "user_id" },
+    );
 
     // Atribui role cliente
     const { error: roleInsertErr } = await supabaseAdmin
