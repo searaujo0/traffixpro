@@ -1,37 +1,12 @@
 import { createFileRoute, useParams, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import {
-  ArrowLeft,
-  Download,
-  Link2,
-  Loader2,
-  TrendingUp,
-  Wallet,
-  MessageCircle,
-  Target,
-  ShoppingBag,
-} from "lucide-react";
+import { ArrowLeft, Download, Link2, Loader2, TrendingUp, Wallet, Target, ShoppingBag, MousePointerClick, Eye, Users, MessageCircle } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { KpiCard } from "@/components/KpiCard";
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-import {
-  aggregate,
-  fetchCampaigns,
-  fetchClient,
-  fetchSales,
-  type CampaignRow,
-  type ClientRow,
-  type SaleRow,
-} from "@/lib/data";
-import { brl, num, pct } from "@/lib/format";
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { fetchClient, fetchSales, type ClientRow, type SaleRow } from "@/lib/data";
+import { fetchAccountPerformance, fetchDashboard, type AccountPerformance, type DailyPoint, type DashboardSummary } from "@/lib/dashboard";
+import { brl, brlPrecise, dateBR, num, pct } from "@/lib/format";
 import { exportElementToPDF } from "@/lib/pdf";
 import { toast } from "sonner";
 
@@ -39,7 +14,7 @@ export const Route = createFileRoute("/clientes/$id")({
   head: () => ({
     meta: [
       { title: "Detalhe do cliente — TraffixPro" },
-      { name: "description", content: "Relatório completo do cliente." },
+      { name: "description", content: "Relatório completo do cliente com dados reais do Meta Ads." },
     ],
   }),
   component: ClientDetailPage,
@@ -48,7 +23,9 @@ export const Route = createFileRoute("/clientes/$id")({
 function ClientDetailPage() {
   const { id } = useParams({ from: "/clientes/$id" });
   const [client, setClient] = useState<ClientRow | null>(null);
-  const [campaigns, setCampaigns] = useState<CampaignRow[]>([]);
+  const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [daily, setDaily] = useState<DailyPoint[]>([]);
+  const [accounts, setAccounts] = useState<AccountPerformance[]>([]);
   const [sales, setSales] = useState<SaleRow[]>([]);
   const [loading, setLoading] = useState(true);
   const reportRef = useRef<HTMLDivElement>(null);
@@ -60,24 +37,26 @@ function ClientDetailPage() {
   async function load() {
     setLoading(true);
     try {
-      const [c, camps, sls] = await Promise.all([
+      const [c, dash, accs, sls] = await Promise.all([
         fetchClient(id),
-        fetchCampaigns(id),
+        fetchDashboard("30d", id),
+        fetchAccountPerformance("30d", id),
         fetchSales(id),
       ]);
       setClient(c);
-      setCampaigns(camps);
+      setSummary(dash.summary);
+      setDaily(dash.daily);
+      setAccounts(accs);
       setSales(sls);
-    } catch (e) {
-      toast.error("Falha ao carregar dados do cliente");
+    } catch {
+      toast.error("Falha ao carregar dados reais do cliente");
     } finally {
       setLoading(false);
     }
   }
 
   async function handleShare() {
-    const url = `${window.location.origin}/clientes/${id}`;
-    await navigator.clipboard.writeText(url);
+    await navigator.clipboard.writeText(`${window.location.origin}/clientes/${id}`);
     toast.success("Link copiado! O cliente precisa estar logado para acessar.");
   }
 
@@ -85,11 +64,7 @@ function ClientDetailPage() {
     if (!reportRef.current || !client) return;
     toast.info("Gerando PDF...");
     try {
-      await exportElementToPDF(
-        reportRef.current,
-        `relatorio-${client.name.toLowerCase().replace(/\s+/g, "-")}.pdf`,
-        `Relatório • ${client.name}`
-      );
+      await exportElementToPDF(reportRef.current, `relatorio-${client.name.toLowerCase().replace(/\s+/g, "-")}.pdf`, `Relatório • ${client.name}`);
       toast.success("PDF gerado");
     } catch {
       toast.error("Erro ao gerar PDF");
@@ -102,48 +77,35 @@ function ClientDetailPage() {
         <div className="flex items-center justify-center py-20">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
-      ) : !client ? (
+      ) : !client || !summary ? (
         <div className="text-center py-20">
           <p className="text-sm text-muted-foreground">Cliente não encontrado.</p>
-          <Link to="/clientes" className="text-xs text-primary underline mt-2 inline-block">
-            Voltar para clientes
-          </Link>
+          <Link to="/clientes" className="text-xs text-primary underline mt-2 inline-block">Voltar para clientes</Link>
         </div>
       ) : (
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <Link
-                to="/clientes"
-                className="h-9 w-9 rounded-lg border border-border bg-secondary/40 flex items-center justify-center hover:bg-secondary transition"
-              >
+              <Link to="/clientes" className="h-9 w-9 rounded-lg border border-border bg-secondary/40 flex items-center justify-center hover:bg-secondary transition">
                 <ArrowLeft className="h-4 w-4" />
               </Link>
               <div>
                 <h1 className="text-2xl md:text-3xl font-semibold">{client.name}</h1>
-                <p className="text-sm text-muted-foreground mt-0.5">
-                  {client.segment ?? "—"} • {client.status}
-                </p>
+                <p className="text-sm text-muted-foreground mt-0.5">{client.segment ?? "—"} • {client.status}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                onClick={handleShare}
-                className="inline-flex items-center gap-2 px-3 h-10 rounded-lg border border-border bg-secondary/40 text-sm font-medium hover:bg-secondary transition"
-              >
+              <button onClick={handleShare} className="inline-flex items-center gap-2 px-3 h-10 rounded-lg border border-border bg-secondary/40 text-sm font-medium hover:bg-secondary transition">
                 <Link2 className="h-4 w-4" /> Compartilhar
               </button>
-              <button
-                onClick={handleExport}
-                className="inline-flex items-center gap-2 px-3 h-10 rounded-lg bg-[image:var(--gradient-primary)] text-primary-foreground text-sm font-medium shadow-[var(--shadow-glow)] hover:opacity-90 transition"
-              >
+              <button onClick={handleExport} className="inline-flex items-center gap-2 px-3 h-10 rounded-lg bg-[image:var(--gradient-primary)] text-primary-foreground text-sm font-medium shadow-[var(--shadow-glow)] hover:opacity-90 transition">
                 <Download className="h-4 w-4" /> Exportar PDF
               </button>
             </div>
           </div>
 
           <div ref={reportRef} className="space-y-6 bg-background">
-            <ClientReport client={client} campaigns={campaigns} sales={sales} />
+            <ClientReport client={client} summary={summary} daily={daily} accounts={accounts} sales={sales} />
           </div>
         </div>
       )}
@@ -151,67 +113,42 @@ function ClientDetailPage() {
   );
 }
 
-function ClientReport({
-  client,
-  campaigns,
-  sales,
-}: {
-  client: ClientRow;
-  campaigns: CampaignRow[];
-  sales: SaleRow[];
-}) {
-  const m = aggregate(campaigns, sales);
-
-  const chartData = campaigns.map((c) => ({
-    name: c.name.slice(0, 14),
-    spend: Number(c.spend),
-    conv: c.conversations,
-  }));
-
+function ClientReport({ client, summary, daily, accounts, sales }: { client: ClientRow; summary: DashboardSummary; daily: DailyPoint[]; accounts: AccountPerformance[]; sales: SaleRow[] }) {
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard label="Faturamento" value={brl(m.revenue)} icon={Wallet} accent="primary" />
-        <KpiCard label="ROI" value={pct(m.roi)} icon={TrendingUp} accent="success" />
-        <KpiCard label="Investimento" value={brl(m.spend)} icon={Target} />
-        <KpiCard label="Vendas" value={num(m.sales)} icon={ShoppingBag} accent="warning" />
+        <KpiCard label="Faturamento" value={brl(summary.revenue)} icon={Wallet} accent="primary" />
+        <KpiCard label="ROI" value={pct(summary.roi)} icon={TrendingUp} accent="success" />
+        <KpiCard label="Investimento" value={brl(summary.spend)} icon={Target} />
+        <KpiCard label="Vendas" value={num(summary.salesCount)} icon={ShoppingBag} accent="warning" />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard label="Conversas" value={num(m.conversations)} icon={MessageCircle} />
-        <KpiCard label="Custo / conversa" value={brl(m.costPerConversation)} icon={Target} />
-        <KpiCard label="Cliques" value={num(m.clicks)} icon={Target} />
-        <KpiCard label="CTR" value={pct(m.ctr)} icon={Target} />
+        <KpiCard label="Leads" value={num(summary.conversions)} icon={MessageCircle} />
+        <KpiCard label="Custo por lead" value={summary.cpl ? brlPrecise(summary.cpl) : "—"} icon={Target} />
+        <KpiCard label="Cliques" value={num(summary.clicks)} icon={MousePointerClick} />
+        <KpiCard label="Impressões" value={num(summary.impressions)} icon={Eye} />
+        <KpiCard label="ROAS" value={`${summary.roas.toFixed(2).replace(".", ",")}x`} icon={TrendingUp} />
+        <KpiCard label="Alcance" value={num(summary.reach)} icon={Users} />
+        <KpiCard label="CTR" value={pct(summary.ctr)} icon={Target} />
+        <KpiCard label="CPC" value={summary.cpc ? brlPrecise(summary.cpc) : "—"} icon={Target} />
       </div>
 
       <div className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-card)]">
-        <h3 className="text-base font-semibold mb-4">Performance por campanha</h3>
-        {chartData.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-8 text-center">
-            Nenhuma campanha cadastrada para este cliente.
-          </p>
+        <h3 className="text-base font-semibold mb-1">Performance diária — últimos 30 dias</h3>
+        <p className="text-xs text-muted-foreground mb-4">Dados vindos das contas Meta Ads vinculadas a {client.name}.</p>
+        {daily.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-8 text-center">Nenhum insight sincronizado. Vincule uma conta e clique em sincronizar na integração Meta Ads.</p>
         ) : (
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData}>
-                <defs>
-                  <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="oklch(0.7 0.18 265)" stopOpacity={0.5} />
-                    <stop offset="100%" stopColor="oklch(0.7 0.18 265)" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
+              <AreaChart data={daily.map((d) => ({ ...d, dateLabel: dateBR(d.date) }))}>
                 <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 0.06)" />
-                <XAxis dataKey="name" stroke="oklch(0.68 0.03 260)" fontSize={11} tickLine={false} axisLine={false} />
+                <XAxis dataKey="dateLabel" stroke="oklch(0.68 0.03 260)" fontSize={11} tickLine={false} axisLine={false} />
                 <YAxis stroke="oklch(0.68 0.03 260)" fontSize={11} tickLine={false} axisLine={false} />
-                <Tooltip
-                  contentStyle={{
-                    background: "oklch(0.205 0.022 265)",
-                    border: "1px solid oklch(1 0 0 / 0.1)",
-                    borderRadius: 12,
-                    fontSize: 12,
-                  }}
-                />
-                <Area type="monotone" dataKey="spend" stroke="oklch(0.7 0.18 265)" fill="url(#g1)" strokeWidth={2} />
+                <Tooltip contentStyle={{ background: "oklch(0.205 0.022 265)", border: "1px solid oklch(1 0 0 / 0.1)", borderRadius: 12, fontSize: 12 }} />
+                <Area type="monotone" dataKey="spend" name="Investimento" stroke="oklch(0.7 0.18 265)" fill="oklch(0.7 0.18 265 / 0.18)" strokeWidth={2} />
+                <Area type="monotone" dataKey="conversions" name="Leads" stroke="oklch(0.78 0.17 165)" fill="oklch(0.78 0.17 165 / 0.12)" strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -219,35 +156,36 @@ function ClientReport({
       </div>
 
       <div className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-card)]">
-        <h3 className="text-base font-semibold mb-4">Campanhas</h3>
-        {campaigns.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhuma campanha.</p>
+        <h3 className="text-base font-semibold mb-4">Contas vinculadas</h3>
+        {accounts.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nenhuma conta de anúncio vinculada a este cliente.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-[11px] uppercase tracking-wider text-muted-foreground border-b border-border">
-                  <th className="py-2 pr-3">Campanha</th>
-                  <th className="py-2 pr-3">Status</th>
-                  <th className="py-2 pr-3">Investido</th>
-                  <th className="py-2 pr-3">Conversas</th>
-                  <th className="py-2 pr-3">CTR</th>
+                  <th className="py-2 pr-3">Conta</th><th className="py-2 pr-3">Investido</th><th className="py-2 pr-3">Leads</th><th className="py-2 pr-3">Cliques</th><th className="py-2 pr-3">Sync</th>
                 </tr>
               </thead>
               <tbody>
-                {campaigns.map((c) => (
-                  <tr key={c.id} className="border-b border-border/50">
-                    <td className="py-2.5 pr-3 font-medium">{c.name}</td>
-                    <td className="py-2.5 pr-3 text-muted-foreground">{c.status}</td>
-                    <td className="py-2.5 pr-3">{brl(Number(c.spend))}</td>
-                    <td className="py-2.5 pr-3">{num(c.conversations)}</td>
-                    <td className="py-2.5 pr-3">{Number(c.ctr).toFixed(1)}%</td>
+                {accounts.map((a) => (
+                  <tr key={a.id} className="border-b border-border/50">
+                    <td className="py-2.5 pr-3"><span className="font-medium">{a.name}</span><br /><span className="text-xs text-muted-foreground">{a.id}</span></td>
+                    <td className="py-2.5 pr-3">{brl(a.spend)}</td>
+                    <td className="py-2.5 pr-3">{num(a.conversions)}</td>
+                    <td className="py-2.5 pr-3">{num(a.clicks)}</td>
+                    <td className="py-2.5 pr-3 text-xs text-muted-foreground">{a.last_sync_at ? new Date(a.last_sync_at).toLocaleString("pt-BR") : "nunca"}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
+      </div>
+
+      <div className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-card)]">
+        <h3 className="text-base font-semibold mb-4">Vendas registradas</h3>
+        {sales.length === 0 ? <p className="text-sm text-muted-foreground">Nenhuma venda registrada no período.</p> : <p className="text-sm text-muted-foreground">{sales.length} registro{sales.length === 1 ? "" : "s"} de venda no histórico do cliente.</p>}
       </div>
     </>
   );

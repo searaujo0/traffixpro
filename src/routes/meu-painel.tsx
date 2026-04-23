@@ -15,14 +15,16 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { brl, brlPrecise, num, pct } from "@/lib/format";
+import { brl, brlPrecise, dateBR, num, pct } from "@/lib/format";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import {
   fetchDashboard,
+  type DailyPoint,
   type DashboardSummary,
   type Period,
 } from "@/lib/dashboard";
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 export const Route = createFileRoute("/meu-painel")({
   head: () => ({
@@ -47,6 +49,7 @@ function ClientPanel() {
   const navigate = useNavigate();
   const [client, setClient] = useState<ClientLite | null>(null);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [daily, setDaily] = useState<DailyPoint[]>([]);
   const [period, setPeriod] = useState<Period>("30d");
   const [busy, setBusy] = useState(true);
   const [qty, setQty] = useState("");
@@ -87,6 +90,7 @@ function ClientPanel() {
     try {
       const r = await fetchDashboard(period, client.id);
       setSummary(r.summary);
+      setDaily(r.daily);
     } catch (e) {
       console.error(e);
     } finally {
@@ -224,6 +228,29 @@ function ClientPanel() {
             <SmallKpi label="Alcance" value={num(m?.reach ?? 0)} />
           </div>
         </section>
+
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-card)]">
+          <div className="mb-4">
+            <h2 className="text-base font-semibold">Gráfico de desempenho</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">Investimento e leads sincronizados pelo gestor.</p>
+          </div>
+          {daily.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-8 text-center">Ainda não há relatório sincronizado para este período.</p>
+          ) : (
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={daily.map((d) => ({ ...d, dateLabel: dateBR(d.date) }))}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 0.06)" />
+                  <XAxis dataKey="dateLabel" stroke="oklch(0.68 0.03 260)" fontSize={11} tickLine={false} axisLine={false} />
+                  <YAxis stroke="oklch(0.68 0.03 260)" fontSize={11} tickLine={false} axisLine={false} />
+                  <Tooltip contentStyle={{ background: "oklch(0.205 0.022 265)", border: "1px solid oklch(1 0 0 / 0.1)", borderRadius: 12, fontSize: 12 }} />
+                  <Area type="monotone" dataKey="spend" name="Investimento" stroke="oklch(0.7 0.18 265)" fill="oklch(0.7 0.18 265 / 0.18)" strokeWidth={2} />
+                  <Area type="monotone" dataKey="conversions" name="Leads" stroke="oklch(0.78 0.17 165)" fill="oklch(0.78 0.17 165 / 0.12)" strokeWidth={2} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
 
         {/* Adicionar venda */}
         <form onSubmit={addSale} className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-card)]">

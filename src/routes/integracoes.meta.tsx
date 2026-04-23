@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Facebook, RefreshCw, Link2 } from "lucide-react";
+import { Loader2, Facebook, RefreshCw, Link2, AlertCircle, CheckCircle2, Clock } from "lucide-react";
 import { toast } from "sonner";
 import {
   getMetaAuthUrl,
@@ -28,7 +28,7 @@ export const Route = createFileRoute("/integracoes/meta")({
 });
 
 type Connection = { id: string; meta_user_id: string; meta_user_name: string | null; expires_at: string | null };
-type AdAccount = { id: string; name: string; currency: string | null; status: string | null; business_name: string | null; client_id: string | null; connection_id: string };
+type AdAccount = { id: string; name: string; currency: string | null; status: string | null; business_name: string | null; client_id: string | null; connection_id: string; last_sync_at: string | null; last_sync_status: string | null; last_sync_error: string | null };
 
 function MetaIntegrationPage() {
   const navigate = useNavigate();
@@ -112,7 +112,7 @@ function MetaIntegrationPage() {
     try {
       const r = await syncFn({ data: { adAccountId, days } });
       if (!r.ok) toast.error(r.error ?? "Erro");
-      else toast.success(`${r.count} dias sincronizados`);
+      else toast.success(r.count > 0 ? `${r.count} dias sincronizados` : "Sincronização concluída sem novos dados no período");
       await load();
     } finally {
       setBusy(null);
@@ -129,13 +129,28 @@ function MetaIntegrationPage() {
           </p>
         </header>
 
+        <div className="grid gap-3 md:grid-cols-4">
+          {[
+            { title: "1. Conectar", text: "Autorize o Facebook", done: connections.length > 0 },
+            { title: "2. Importar", text: "Trazer contas act_", done: accounts.length > 0 },
+            { title: "3. Vincular", text: "Escolher cliente", done: accounts.some((a) => !!a.client_id) },
+            { title: "4. Sincronizar", text: "Buscar relatórios", done: accounts.some((a) => a.last_sync_status === "success") },
+          ].map((step) => (
+            <Card key={step.title} className="p-4">
+              <div className="flex items-center gap-2">
+                {step.done ? <CheckCircle2 className="h-4 w-4 text-success" /> : <Clock className="h-4 w-4 text-muted-foreground" />}
+                <p className="text-sm font-semibold">{step.title}</p>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">{step.text}</p>
+            </Card>
+          ))}
+        </div>
+
         <Card className="p-5">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
               <h2 className="font-semibold">Conectar com Facebook</h2>
-              <p className="text-sm text-muted-foreground">
-                Autorize o app a ler suas contas de anúncio (ads_read, business_management).
-              </p>
+              <p className="text-sm text-muted-foreground">Autorize o app a ler suas contas de anúncio reais.</p>
             </div>
             <Button onClick={handleConnect} disabled={busy === "connect"}>
               {busy === "connect" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Facebook className="h-4 w-4" />}
@@ -213,7 +228,7 @@ function MetaIntegrationPage() {
                             {a.business_name ? ` · ${a.business_name}` : ""}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap justify-end">
                           <Select
                             value={a.client_id ?? "__none"}
                             onValueChange={(v) => handleLink(a.id, v)}
@@ -234,7 +249,8 @@ function MetaIntegrationPage() {
                             size="sm"
                             variant="ghost"
                             onClick={() => handleSync(a.id)}
-                            disabled={busy === a.id + ":sync"}
+                            disabled={busy === a.id + ":sync" || !a.client_id}
+                            title={!a.client_id ? "Vincule a um cliente antes de sincronizar" : "Sincronizar dados reais"}
                           >
                             {busy === a.id + ":sync" ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
@@ -245,7 +261,13 @@ function MetaIntegrationPage() {
                               </>
                             )}
                           </Button>
-                          {a.client_id && <Badge variant="secondary">vinculada</Badge>}
+                          {a.client_id ? <Badge variant="secondary">vinculada</Badge> : <Badge variant="outline">sem cliente</Badge>}
+                          {a.last_sync_status === "success" && <Badge variant="secondary">sync ok</Badge>}
+                          {a.last_sync_status === "error" && <Badge variant="destructive"><AlertCircle className="h-3 w-3 mr-1" />erro</Badge>}
+                          <p className="basis-full text-right text-[10px] text-muted-foreground">
+                            Última sync: {a.last_sync_at ? new Date(a.last_sync_at).toLocaleString("pt-BR") : "nunca"}
+                            {a.last_sync_error ? ` · ${a.last_sync_error}` : ""}
+                          </p>
                         </div>
                       </div>
                     ))}

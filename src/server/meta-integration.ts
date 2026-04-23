@@ -115,7 +115,7 @@ export const listMetaConnections = createServerFn({ method: "GET" })
     if (ids.length) {
       const { data } = await context.supabase
         .from("ad_accounts" as any)
-        .select("id, name, currency, status, business_name, client_id, connection_id")
+        .select("id, name, currency, status, business_name, client_id, connection_id, last_sync_at, last_sync_status, last_sync_error")
         .in("connection_id", ids);
       accounts = data || [];
     }
@@ -152,6 +152,8 @@ export const importAdAccounts = createServerFn({ method: "POST" })
       currency: a.currency,
       status: String(a.account_status ?? ""),
       business_name: a.business_name ?? null,
+      last_sync_status: "never",
+      last_sync_error: null,
       updated_at: new Date().toISOString(),
     }));
 
@@ -194,15 +196,23 @@ export const syncInsights = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: acc } = await context.supabase
       .from("ad_accounts" as any)
-      .select("id, connection_id, meta_connections!inner(user_id, access_token)")
+      .select("id, client_id, connection_id, meta_connections!inner(user_id, access_token)")
       .eq("id", data.adAccountId)
       .maybeSingle();
 
     if (!acc) return { ok: false, error: "Conta não encontrada", count: 0 };
+    if (!(acc as any).client_id) {
+      return { ok: false, error: "Vincule esta conta a um cliente antes de sincronizar.", count: 0 };
+    }
     const conn: any = (acc as any).meta_connections;
     if (conn.user_id !== context.userId) {
       return { ok: false, error: "Sem permissão", count: 0 };
     }
+
+    await context.supabase
+      .from("ad_accounts" as any)
+      .update({ last_sync_status: "running", last_sync_error: null, updated_at: new Date().toISOString() })
+      .eq("id", data.adAccountId);
 
     const days = data.days ?? 30;
     const since = new Date(Date.now() - days * 86400_000).toISOString().slice(0, 10);
@@ -217,11 +227,18 @@ export const syncInsights = createServerFn({ method: "POST" })
 
     const res = await fetch(url);
     const json: any = await res.json();
-    if (!res.ok) return { ok: false, error: json.error?.message || "Erro Graph API", count: 0 };
+    if (!res.ok) {
+      const error = json.error?.message || "Erro Graph API";
+      await context.supabase
+        .from("ad_accounts" as any)
+        .update({ last_sync_status: "error", last_sync_error: error, updated_at: new Date().toISOString() })
+        .eq("id", data.adAccountId);
+      return { ok: false, error, count: 0 };
+    }
 
     const rows = (json.data || []).map((d: any) => {
       const conversions = (d.actions || [])
-        .filter((a: any) => /purchase|lead|complete_registration/i.test(a.action_type))
+        .filter((a: any) => /purchase|lead|complete_registration|onsite_conversion|messaging_conversation|contact|submit_application|subscribe|start_trial|add_to_cart|initiate_checkout/i.test(a.action_type))
         .reduce((s: number, a: any) => s + Number(a.value || 0), 0);
       return {
         ad_account_id: data.adAccountId,
@@ -240,7 +257,18 @@ export const syncInsights = createServerFn({ method: "POST" })
       const { error } = await context.supabase
         .from("ad_insights" as any)
         .upsert(rows, { onConflict: "ad_account_id,date" });
-      if (error) return { ok: false, error: error.message, count: 0 };
+      if (error) {
+        await context.supabase
+          .from("ad_accounts" as any)
+          .update({ last_sync_status: "error", last_sync_error: error.message, updated_at: new Date().toISOString() })
+          .eq("id", data.adAccountId);
+        return { ok: false, error: error.message, count: 0 };
+      }
     }
+
+    await context.supabase
+      .from("ad_accounts" as any)
+      .update({ last_sync_at: new Date().toISOString(), last_sync_status: "success", last_sync_error: null, updated_at: new Date().toISOString() })
+      .eq("id", data.adAccountId);
     return { ok: true, error: null, count: rows.length };
   });

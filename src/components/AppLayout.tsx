@@ -94,11 +94,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </nav>
 
         <div className="p-4 border-t border-sidebar-border">
-          <div className="rounded-xl p-3 bg-[image:var(--gradient-primary)]/10 border border-primary/20">
-            <p className="text-xs font-medium text-foreground">5 clientes ativos</p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
-              Atualizado hoje às 09:00
-            </p>
+          <div className="rounded-xl p-3 bg-secondary/40 border border-border">
+            <p className="text-xs font-medium text-foreground">Dados reais do Meta Ads</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">Importe, vincule e sincronize contas.</p>
           </div>
         </div>
       </aside>
