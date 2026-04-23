@@ -151,7 +151,7 @@ export async function fetchAccountPerformance(period: Period, clientId?: string)
   const { data: accounts, error: accountsErr } = await accountsQuery;
   if (accountsErr) throw accountsErr;
 
-  const typedAccounts = (accounts ?? []) as Array<Omit<AccountPerformance, "spend" | "impressions" | "reach" | "clicks" | "conversions" | "ctr" | "cpc" | "cpl">>;
+  const typedAccounts = ((accounts ?? []) as unknown) as Array<Omit<AccountPerformance, "spend" | "impressions" | "reach" | "clicks" | "conversions" | "ctr" | "cpc" | "cpl">>;
   const ids = typedAccounts.map((a) => a.id);
   if (ids.length === 0) return [];
 
