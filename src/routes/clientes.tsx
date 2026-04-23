@@ -2,10 +2,11 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { AppLayout } from "@/components/AppLayout";
-import { brl } from "@/lib/format";
+import { brl, num, pct } from "@/lib/format";
 import { Plus, ExternalLink, Loader2, KeyRound, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { aggregate, fetchCampaigns, fetchSales, type ClientRow } from "@/lib/data";
+import { type ClientRow } from "@/lib/data";
+import { fetchAccountPerformance, fetchDashboard } from "@/lib/dashboard";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { createClientUser } from "@/server/admin-users";
@@ -27,7 +28,7 @@ export const Route = createFileRoute("/clientes")({
   component: ClientesPage,
 });
 
-type Row = ClientRow & { spend: number; revenue: number; roi: number };
+type Row = ClientRow & { spend: number; revenue: number; roi: number; accountCount: number; lastSync: string | null; conversions: number };
 
 function ClientesPage() {
   const [rows, setRows] = useState<Row[]>([]);
@@ -83,9 +84,24 @@ function ClientesPage() {
     const list = (clients ?? []) as ClientRow[];
     const enriched: Row[] = await Promise.all(
       list.map(async (c) => {
-        const [camps, sls] = await Promise.all([fetchCampaigns(c.id), fetchSales(c.id)]);
-        const m = aggregate(camps, sls);
-        return { ...c, spend: m.spend, revenue: m.revenue, roi: m.roi };
+        const [dashboard, accounts] = await Promise.all([
+          fetchDashboard("30d", c.id),
+          fetchAccountPerformance("30d", c.id),
+        ]);
+        const lastSync = accounts
+          .map((a) => a.last_sync_at)
+          .filter(Boolean)
+          .sort()
+          .at(-1) ?? null;
+        return {
+          ...c,
+          spend: dashboard.summary.spend,
+          revenue: dashboard.summary.revenue,
+          roi: dashboard.summary.roi,
+          conversions: dashboard.summary.conversions,
+          accountCount: accounts.length,
+          lastSync,
+        };
       })
     );
     setRows(enriched);
@@ -205,8 +221,14 @@ function ClientesPage() {
                   </div>
                   <div>
                     <p className="text-[10px] uppercase tracking-wider text-muted-foreground">ROI</p>
-                    <p className="text-sm font-semibold mt-0.5 text-success">{c.roi.toFixed(0)}%</p>
+                    <p className="text-sm font-semibold mt-0.5 text-success">{pct(c.roi)}</p>
                   </div>
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-2 text-[10px] text-muted-foreground">
+                  <span>{c.accountCount} conta{c.accountCount === 1 ? "" : "s"} vinculada{c.accountCount === 1 ? "" : "s"}</span>
+                  <span className="text-right">{num(c.conversions)} leads</span>
+                  <span className="col-span-2">Última sync: {c.lastSync ? new Date(c.lastSync).toLocaleString("pt-BR") : "nunca"}</span>
                 </div>
 
                 <div className="mt-4 flex items-center gap-2">
