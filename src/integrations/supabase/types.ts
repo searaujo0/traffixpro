@@ -22,6 +22,9 @@ export type Database = {
           created_at: string
           currency: string | null
           id: string
+          last_sync_at: string | null
+          last_sync_error: string | null
+          last_sync_status: string
           name: string
           status: string | null
           updated_at: string
@@ -33,6 +36,9 @@ export type Database = {
           created_at?: string
           currency?: string | null
           id: string
+          last_sync_at?: string | null
+          last_sync_error?: string | null
+          last_sync_status?: string
           name: string
           status?: string | null
           updated_at?: string
@@ -44,6 +50,9 @@ export type Database = {
           created_at?: string
           currency?: string | null
           id?: string
+          last_sync_at?: string | null
+          last_sync_error?: string | null
+          last_sync_status?: string
           name?: string
           status?: string | null
           updated_at?: string
