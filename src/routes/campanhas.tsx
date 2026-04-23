@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
-import { supabase } from "@/integrations/supabase/client";
-import { brl, num } from "@/lib/format";
+import { brl, brlPrecise, num, pct } from "@/lib/format";
+import { fetchAccountPerformance, type AccountPerformance, type Period } from "@/lib/dashboard";
 
 export const Route = createFileRoute("/campanhas")({
   head: () => ({
@@ -15,59 +15,44 @@ export const Route = createFileRoute("/campanhas")({
   component: CampanhasPage,
 });
 
-type Row = {
-  id: string;
-  name: string;
-  currency: string | null;
-  status: string | null;
-  business_name: string | null;
-  client_id: string | null;
-  spend: number;
-  conversions: number;
-  clicks: number;
-};
+type Row = AccountPerformance;
+
+const periodLabels: Record<Period, string> = { today: "Hoje", "7d": "7 dias", "30d": "30 dias" };
 
 function CampanhasPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState<Period>("30d");
 
   useEffect(() => {
     void load();
-  }, []);
+  }, [period]);
 
   async function load() {
     setLoading(true);
-    const { data: accs } = await supabase
-      .from("ad_accounts")
-      .select("id, name, currency, status, business_name, client_id");
-    const list = (accs ?? []) as unknown as Omit<Row, "spend" | "conversions" | "clicks">[];
-    const enriched: Row[] = await Promise.all(
-      list.map(async (a) => {
-        const { data: ins } = await supabase
-          .from("ad_insights")
-          .select("spend, conversions, clicks")
-          .eq("ad_account_id", a.id);
-        let spend = 0, conversions = 0, clicks = 0;
-        for (const r of (ins ?? []) as { spend: number; conversions: number; clicks: number }[]) {
-          spend += Number(r.spend);
-          conversions += Number(r.conversions);
-          clicks += Number(r.clicks);
-        }
-        return { ...a, spend, conversions, clicks };
-      }),
-    );
-    setRows(enriched);
-    setLoading(false);
+    try {
+      setRows(await fetchAccountPerformance(period));
+    } finally {
+      setLoading(false);
+    }
+    return;
   }
 
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-semibold">Contas de anúncio</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {rows.length} conta{rows.length === 1 ? "" : "s"} sincronizada{rows.length === 1 ? "" : "s"}.
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-semibold">Contas de anúncio</h1>
+            <p className="text-sm text-muted-foreground mt-1">{rows.length} conta{rows.length === 1 ? "" : "s"} importada{rows.length === 1 ? "" : "s"} · {periodLabels[period]}</p>
+          </div>
+          <div className="flex p-1 rounded-lg bg-secondary border border-border/60 text-xs">
+            {(["today", "7d", "30d"] as Period[]).map((p) => (
+              <button key={p} onClick={() => setPeriod(p)} className={`px-3 py-1.5 rounded-md font-medium transition ${period === p ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+                {periodLabels[p]}
+              </button>
+            ))}
+          </div>
         </div>
         {loading ? (
           <div className="flex justify-center py-20">
@@ -75,7 +60,7 @@ function CampanhasPage() {
           </div>
         ) : rows.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
-            Nenhuma conta importada. Vá em Meta Ads para conectar e importar.
+Nenhuma conta importada. Vá em Meta Ads para conectar o Facebook e importar contas reais.
           </div>
         ) : (
           <div className="grid gap-3">
@@ -84,6 +69,11 @@ function CampanhasPage() {
                 <div>
                   <p className="font-semibold">{r.name}</p>
                   <p className="text-xs text-muted-foreground">{r.id} · {r.currency ?? "—"} · {r.business_name ?? "—"}</p>
+                  <div className="mt-2 flex flex-wrap gap-2 text-[10px]">
+                    {r.client_id ? <span className="inline-flex items-center gap-1 text-success"><CheckCircle2 className="h-3 w-3" /> vinculada</span> : <span className="inline-flex items-center gap-1 text-muted-foreground"><AlertCircle className="h-3 w-3" /> sem cliente</span>}
+                    <span className="text-muted-foreground">Última sync: {r.last_sync_at ? new Date(r.last_sync_at).toLocaleString("pt-BR") : "nunca"}</span>
+                    {r.last_sync_error && <span className="text-destructive">{r.last_sync_error}</span>}
+                  </div>
                 </div>
                 <div className="flex items-center gap-6 text-sm">
                   <div>
@@ -93,6 +83,14 @@ function CampanhasPage() {
                   <div>
                     <p className="text-[10px] uppercase text-muted-foreground">Leads</p>
                     <p className="font-semibold">{num(r.conversions)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase text-muted-foreground">CPL</p>
+                    <p className="font-semibold">{r.cpl ? brlPrecise(r.cpl) : "—"}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase text-muted-foreground">CTR</p>
+                    <p className="font-semibold">{pct(r.ctr)}</p>
                   </div>
                   <div>
                     <p className="text-[10px] uppercase text-muted-foreground">Cliques</p>
