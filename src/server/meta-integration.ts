@@ -161,19 +161,8 @@ export const importAdAccounts = createServerFn({ method: "POST" })
       const { error } = await context.supabase
         .from("ad_accounts" as any)
         .upsert(rows, { onConflict: "id" });
-      if (error) {
-        await context.supabase
-          .from("ad_accounts" as any)
-          .update({ last_sync_status: "error", last_sync_error: error.message, updated_at: new Date().toISOString() })
-          .eq("id", data.adAccountId);
-        return { ok: false, error: error.message, count: 0 };
-      }
+      if (error) return { ok: false, error: error.message, count: 0 };
     }
-
-    await context.supabase
-      .from("ad_accounts" as any)
-      .update({ last_sync_at: new Date().toISOString(), last_sync_status: "success", last_sync_error: null, updated_at: new Date().toISOString() })
-      .eq("id", data.adAccountId);
     return { ok: true, error: null, count: rows.length };
   });
 
@@ -268,7 +257,18 @@ export const syncInsights = createServerFn({ method: "POST" })
       const { error } = await context.supabase
         .from("ad_insights" as any)
         .upsert(rows, { onConflict: "ad_account_id,date" });
-      if (error) return { ok: false, error: error.message, count: 0 };
+      if (error) {
+        await context.supabase
+          .from("ad_accounts" as any)
+          .update({ last_sync_status: "error", last_sync_error: error.message, updated_at: new Date().toISOString() })
+          .eq("id", data.adAccountId);
+        return { ok: false, error: error.message, count: 0 };
+      }
     }
+
+    await context.supabase
+      .from("ad_accounts" as any)
+      .update({ last_sync_at: new Date().toISOString(), last_sync_status: "success", last_sync_error: null, updated_at: new Date().toISOString() })
+      .eq("id", data.adAccountId);
     return { ok: true, error: null, count: rows.length };
   });
