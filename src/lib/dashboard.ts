@@ -12,7 +12,6 @@ export type DashboardSummary = {
   cpc: number;
   cpm: number;
   cpl: number;
-  // sales (from sales table)
   revenue: number;
   salesCount: number;
   roi: number;
@@ -62,7 +61,6 @@ export async function fetchDashboard(
 ): Promise<{ summary: DashboardSummary; daily: DailyPoint[] }> {
   const { since, until } = rangeFor(period);
 
-  // Insights query — RLS filtra automaticamente (admin vê tudo, cliente vê só os seus)
   let insightsQuery = supabase
     .from("ad_insights")
     .select("date, spend, impressions, reach, clicks, conversions, ad_account_id, ad_accounts!inner(client_id)")
@@ -70,14 +68,11 @@ export async function fetchDashboard(
     .lte("date", until)
     .order("date", { ascending: true });
 
-  if (clientId) {
-    insightsQuery = insightsQuery.eq("ad_accounts.client_id", clientId);
-  }
+  if (clientId) insightsQuery = insightsQuery.eq("ad_accounts.client_id", clientId);
 
   const { data: insights, error: insErr } = await insightsQuery;
   if (insErr) throw insErr;
 
-  // Sales — RLS filtra automaticamente
   let salesQuery = supabase
     .from("sales")
     .select("quantity, unit_value, sale_date, client_id")
@@ -87,13 +82,12 @@ export async function fetchDashboard(
   const { data: sales, error: salesErr } = await salesQuery;
   if (salesErr) throw salesErr;
 
-  // Aggregate per day
   const dailyMap = new Map<string, DailyPoint>();
-  let spend = 0,
-    impressions = 0,
-    reach = 0,
-    clicks = 0,
-    conversions = 0;
+  let spend = 0;
+  let impressions = 0;
+  let reach = 0;
+  let clicks = 0;
+  let conversions = 0;
 
   for (const r of insights ?? []) {
     const row = r as unknown as {
@@ -114,13 +108,7 @@ export async function fetchDashboard(
     reach += re;
     clicks += cl;
     conversions += co;
-    const cur = dailyMap.get(row.date) ?? {
-      date: row.date,
-      spend: 0,
-      conversions: 0,
-      clicks: 0,
-      impressions: 0,
-    };
+    const cur = dailyMap.get(row.date) ?? { date: row.date, spend: 0, conversions: 0, clicks: 0, impressions: 0 };
     cur.spend += s;
     cur.conversions += co;
     cur.clicks += cl;
@@ -142,28 +130,10 @@ export async function fetchDashboard(
   const cpl = conversions ? spend / conversions : 0;
   const roi = spend ? ((revenue - spend) / spend) * 100 : 0;
   const roas = spend ? revenue / spend : 0;
-
-  const daily = Array.from(dailyMap.values()).sort((a, b) =>
-    a.date.localeCompare(b.date),
-  );
+  const daily = Array.from(dailyMap.values()).sort((a, b) => a.date.localeCompare(b.date));
 
   return {
-    summary: {
-      spend,
-      impressions,
-      reach,
-      clicks,
-      conversions,
-      ctr,
-      cpc,
-      cpm,
-      cpl,
-      revenue,
-      salesCount,
-      roi,
-      roas,
-      hasData: (insights?.length ?? 0) > 0 || (sales?.length ?? 0) > 0,
-    },
+    summary: { spend, impressions, reach, clicks, conversions, ctr, cpc, cpm, cpl, revenue, salesCount, roi, roas, hasData: (insights?.length ?? 0) > 0 || (sales?.length ?? 0) > 0 },
     daily,
   };
 }
@@ -172,7 +142,7 @@ export async function fetchAccountPerformance(period: Period, clientId?: string)
   const { since, until } = rangeFor(period);
 
   let accountsQuery = supabase
-    .from("ad_accounts")
+    .from("ad_accounts" as any)
     .select("id, name, currency, status, business_name, client_id, last_sync_at, last_sync_status, last_sync_error")
     .order("name", { ascending: true });
 
@@ -181,7 +151,8 @@ export async function fetchAccountPerformance(period: Period, clientId?: string)
   const { data: accounts, error: accountsErr } = await accountsQuery;
   if (accountsErr) throw accountsErr;
 
-  const ids = (accounts ?? []).map((a) => a.id);
+  const typedAccounts = (accounts ?? []) as Array<Omit<AccountPerformance, "spend" | "impressions" | "reach" | "clicks" | "conversions" | "ctr" | "cpc" | "cpl">>;
+  const ids = typedAccounts.map((a) => a.id);
   if (ids.length === 0) return [];
 
   const { data: insights, error: insightsErr } = await supabase
@@ -192,25 +163,20 @@ export async function fetchAccountPerformance(period: Period, clientId?: string)
     .lte("date", until);
   if (insightsErr) throw insightsErr;
 
-  const totals = new Map<string, Omit<AccountPerformance, "id" | "name" | "currency" | "status" | "business_name" | "client_id" | "last_sync_at" | "last_sync_status" | "last_sync_error" | "ctr" | "cpc" | "cpl">>();
+  const totals = new Map<string, { spend: number; impressions: number; reach: number; clicks: number; conversions: number }>();
   for (const r of insights ?? []) {
-    const cur = totals.get(r.ad_account_id) ?? { spend: 0, impressions: 0, reach: 0, clicks: 0, conversions: 0 };
-    cur.spend += Number(r.spend);
-    cur.impressions += Number(r.impressions);
-    cur.reach += Number(r.reach);
-    cur.clicks += Number(r.clicks);
-    cur.conversions += Number(r.conversions);
-    totals.set(r.ad_account_id, cur);
+    const row = r as unknown as { ad_account_id: string; spend: number | string; impressions: number | string; reach: number | string; clicks: number | string; conversions: number | string };
+    const cur = totals.get(row.ad_account_id) ?? { spend: 0, impressions: 0, reach: 0, clicks: 0, conversions: 0 };
+    cur.spend += Number(row.spend);
+    cur.impressions += Number(row.impressions);
+    cur.reach += Number(row.reach);
+    cur.clicks += Number(row.clicks);
+    cur.conversions += Number(row.conversions);
+    totals.set(row.ad_account_id, cur);
   }
 
-  return (accounts ?? []).map((a) => {
+  return typedAccounts.map((a) => {
     const t = totals.get(a.id) ?? { spend: 0, impressions: 0, reach: 0, clicks: 0, conversions: 0 };
-    return {
-      ...a,
-      ...t,
-      ctr: t.impressions ? (t.clicks / t.impressions) * 100 : 0,
-      cpc: t.clicks ? t.spend / t.clicks : 0,
-      cpl: t.conversions ? t.spend / t.conversions : 0,
-    };
+    return { ...a, ...t, ctr: t.impressions ? (t.clicks / t.impressions) * 100 : 0, cpc: t.clicks ? t.spend / t.clicks : 0, cpl: t.conversions ? t.spend / t.conversions : 0 };
   });
 }
