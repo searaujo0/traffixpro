@@ -28,6 +28,26 @@ export type DailyPoint = {
   impressions: number;
 };
 
+export type AccountPerformance = {
+  id: string;
+  name: string;
+  currency: string | null;
+  status: string | null;
+  business_name: string | null;
+  client_id: string | null;
+  last_sync_at: string | null;
+  last_sync_status: string | null;
+  last_sync_error: string | null;
+  spend: number;
+  impressions: number;
+  reach: number;
+  clicks: number;
+  conversions: number;
+  ctr: number;
+  cpc: number;
+  cpl: number;
+};
+
 function rangeFor(period: Period): { since: string; until: string } {
   const today = new Date();
   const until = today.toISOString().slice(0, 10);
@@ -146,4 +166,51 @@ export async function fetchDashboard(
     },
     daily,
   };
+}
+
+export async function fetchAccountPerformance(period: Period, clientId?: string): Promise<AccountPerformance[]> {
+  const { since, until } = rangeFor(period);
+
+  let accountsQuery = supabase
+    .from("ad_accounts")
+    .select("id, name, currency, status, business_name, client_id, last_sync_at, last_sync_status, last_sync_error")
+    .order("name", { ascending: true });
+
+  if (clientId) accountsQuery = accountsQuery.eq("client_id", clientId);
+
+  const { data: accounts, error: accountsErr } = await accountsQuery;
+  if (accountsErr) throw accountsErr;
+
+  const ids = (accounts ?? []).map((a) => a.id);
+  if (ids.length === 0) return [];
+
+  const { data: insights, error: insightsErr } = await supabase
+    .from("ad_insights")
+    .select("ad_account_id, spend, impressions, reach, clicks, conversions")
+    .in("ad_account_id", ids)
+    .gte("date", since)
+    .lte("date", until);
+  if (insightsErr) throw insightsErr;
+
+  const totals = new Map<string, Omit<AccountPerformance, "id" | "name" | "currency" | "status" | "business_name" | "client_id" | "last_sync_at" | "last_sync_status" | "last_sync_error" | "ctr" | "cpc" | "cpl">>();
+  for (const r of insights ?? []) {
+    const cur = totals.get(r.ad_account_id) ?? { spend: 0, impressions: 0, reach: 0, clicks: 0, conversions: 0 };
+    cur.spend += Number(r.spend);
+    cur.impressions += Number(r.impressions);
+    cur.reach += Number(r.reach);
+    cur.clicks += Number(r.clicks);
+    cur.conversions += Number(r.conversions);
+    totals.set(r.ad_account_id, cur);
+  }
+
+  return (accounts ?? []).map((a) => {
+    const t = totals.get(a.id) ?? { spend: 0, impressions: 0, reach: 0, clicks: 0, conversions: 0 };
+    return {
+      ...a,
+      ...t,
+      ctr: t.impressions ? (t.clicks / t.impressions) * 100 : 0,
+      cpc: t.clicks ? t.spend / t.clicks : 0,
+      cpl: t.conversions ? t.spend / t.conversions : 0,
+    };
+  });
 }
