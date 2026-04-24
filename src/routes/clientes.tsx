@@ -406,6 +406,71 @@ function ClientesPage() {
             </form>
           </DialogContent>
         </Dialog>
+
+        <Dialog open={!!editClient} onOpenChange={(o) => !o && setEditClient(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar cliente</DialogTitle>
+              <DialogDescription>Atualize nome, segmento e status.</DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleEditSubmit} className="space-y-3">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Nome</label>
+                <Input value={editName} onChange={(e) => setEditName(e.target.value)} required className="mt-1" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Segmento</label>
+                <Input value={editSegment} onChange={(e) => setEditSegment(e.target.value)} className="mt-1" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Status</label>
+                <select
+                  value={editStatus}
+                  onChange={(e) => setEditStatus(e.target.value as "ativo" | "inativo")}
+                  className="mt-1 w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  <option value="ativo">Ativo</option>
+                  <option value="inativo">Inativo</option>
+                </select>
+              </div>
+              <button
+                type="submit"
+                disabled={editSubmitting}
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition disabled:opacity-50"
+              >
+                {editSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                Salvar alterações
+              </button>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir cliente?</AlertDialogTitle>
+              <AlertDialogDescription>
+                {deleteTarget?.name}: as contas de anúncio vinculadas serão desvinculadas
+                e todas as vendas registradas serão apagadas. O usuário de acesso permanece
+                no sistema. Esta ação não pode ser desfeita.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={deleting}
+                onClick={(e) => {
+                  e.preventDefault();
+                  void handleDeleteConfirm();
+                }}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {deleting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                Excluir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AppLayout>
   );
