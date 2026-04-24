@@ -84,6 +84,7 @@ export type Database = {
           date: string
           id: string
           impressions: number
+          messages: number
           raw: Json | null
           reach: number
           spend: number
@@ -97,6 +98,7 @@ export type Database = {
           date: string
           id?: string
           impressions?: number
+          messages?: number
           raw?: Json | null
           reach?: number
           spend?: number
@@ -110,6 +112,7 @@ export type Database = {
           date?: string
           id?: string
           impressions?: number
+          messages?: number
           raw?: Json | null
           reach?: number
           spend?: number
