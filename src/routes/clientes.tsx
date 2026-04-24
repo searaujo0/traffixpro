@@ -1,15 +1,16 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { AppLayout } from "@/components/AppLayout";
 import { brl, num, pct } from "@/lib/format";
-import { Plus, ExternalLink, Loader2, KeyRound, Check } from "lucide-react";
+import { Plus, ExternalLink, Loader2, KeyRound, Check, Pencil, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { type ClientRow } from "@/lib/data";
 import { fetchAccountPerformance, fetchDashboard } from "@/lib/dashboard";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { createClientUser } from "@/server/admin-users";
+import { updateClient, deleteClient } from "@/server/clients-manage";
 import {
   Dialog,
   DialogContent,
@@ -17,6 +18,16 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
 
 export const Route = createFileRoute("/clientes")({
   head: () => ({
