@@ -1,15 +1,16 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { AppLayout } from "@/components/AppLayout";
 import { brl, num, pct } from "@/lib/format";
-import { Plus, ExternalLink, Loader2, KeyRound, Check } from "lucide-react";
+import { Plus, ExternalLink, Loader2, KeyRound, Check, Pencil, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { type ClientRow } from "@/lib/data";
 import { fetchAccountPerformance, fetchDashboard } from "@/lib/dashboard";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { createClientUser } from "@/server/admin-users";
+import { updateClient, deleteClient } from "@/server/clients-manage";
 import {
   Dialog,
   DialogContent,
@@ -17,6 +18,16 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
 
 export const Route = createFileRoute("/clientes")({
   head: () => ({
@@ -43,6 +54,71 @@ function ClientesPage() {
   const [accessPassword, setAccessPassword] = useState("");
   const [accessSubmitting, setAccessSubmitting] = useState(false);
   const createUserFn = useServerFn(createClientUser);
+  const updateClientFn = useServerFn(updateClient);
+  const deleteClientFn = useServerFn(deleteClient);
+  const navigate = useNavigate();
+
+  // Edit state
+  const [editClient, setEditClient] = useState<Row | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editSegment, setEditSegment] = useState("");
+  const [editStatus, setEditStatus] = useState<"ativo" | "inativo">("ativo");
+  const [editSubmitting, setEditSubmitting] = useState(false);
+
+  // Delete state
+  const [deleteTarget, setDeleteTarget] = useState<Row | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  function openEdit(c: Row) {
+    setEditClient(c);
+    setEditName(c.name);
+    setEditSegment(c.segment ?? "");
+    setEditStatus((c.status as "ativo" | "inativo") ?? "ativo");
+  }
+
+  async function handleEditSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editClient) return;
+    setEditSubmitting(true);
+    try {
+      const res = await updateClientFn({
+        data: {
+          id: editClient.id,
+          name: editName,
+          segment: editSegment.trim() || null,
+          status: editStatus,
+        },
+      });
+      if (res.error) toast.error(res.error);
+      else {
+        toast.success("Cliente atualizado");
+        setEditClient(null);
+        void load();
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao atualizar");
+    } finally {
+      setEditSubmitting(false);
+    }
+  }
+
+  async function handleDeleteConfirm() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const res = await deleteClientFn({ data: { id: deleteTarget.id } });
+      if (res.error) toast.error(res.error);
+      else {
+        toast.success("Cliente excluído");
+        setDeleteTarget(null);
+        void load();
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao excluir");
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   useEffect(() => {
     void load();
@@ -232,13 +308,31 @@ function ClientesPage() {
                 </div>
 
                 <div className="mt-4 flex items-center gap-2">
-                  <Link
-                    to="/clientes/$id"
-                    params={{ id: c.id }}
-                    className="flex-1 inline-flex items-center justify-center gap-2 text-xs font-medium text-primary hover:underline"
+                  <button
+                    type="button"
+                    onClick={() => navigate({ to: "/clientes/$id", params: { id: c.id } })}
+                    className="flex-1 inline-flex items-center justify-center gap-2 px-3 h-9 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition"
                   >
                     Ver relatório <ExternalLink className="h-3 w-3" />
-                  </Link>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openEdit(c)}
+                    title="Editar cliente"
+                    className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-secondary transition"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeleteTarget(c)}
+                    title="Excluir cliente"
+                    className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-border text-muted-foreground hover:text-destructive hover:border-destructive/40 transition"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                <div className="mt-2 flex items-center justify-end">
                   {c.owner_user_id ? (
                     <span className="inline-flex items-center gap-1 text-[10px] text-success">
                       <Check className="h-3 w-3" /> Acesso ativo
@@ -250,7 +344,7 @@ function ClientesPage() {
                         setAccessEmail("");
                         setAccessPassword("");
                       }}
-                      className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+                      className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground hover:text-foreground"
                     >
                       <KeyRound className="h-3 w-3" /> Criar acesso
                     </button>
@@ -312,6 +406,71 @@ function ClientesPage() {
             </form>
           </DialogContent>
         </Dialog>
+
+        <Dialog open={!!editClient} onOpenChange={(o) => !o && setEditClient(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar cliente</DialogTitle>
+              <DialogDescription>Atualize nome, segmento e status.</DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleEditSubmit} className="space-y-3">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Nome</label>
+                <Input value={editName} onChange={(e) => setEditName(e.target.value)} required className="mt-1" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Segmento</label>
+                <Input value={editSegment} onChange={(e) => setEditSegment(e.target.value)} className="mt-1" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Status</label>
+                <select
+                  value={editStatus}
+                  onChange={(e) => setEditStatus(e.target.value as "ativo" | "inativo")}
+                  className="mt-1 w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  <option value="ativo">Ativo</option>
+                  <option value="inativo">Inativo</option>
+                </select>
+              </div>
+              <button
+                type="submit"
+                disabled={editSubmitting}
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition disabled:opacity-50"
+              >
+                {editSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                Salvar alterações
+              </button>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir cliente?</AlertDialogTitle>
+              <AlertDialogDescription>
+                {deleteTarget?.name}: as contas de anúncio vinculadas serão desvinculadas
+                e todas as vendas registradas serão apagadas. O usuário de acesso permanece
+                no sistema. Esta ação não pode ser desfeita.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={deleting}
+                onClick={(e) => {
+                  e.preventDefault();
+                  void handleDeleteConfirm();
+                }}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {deleting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                Excluir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AppLayout>
   );
