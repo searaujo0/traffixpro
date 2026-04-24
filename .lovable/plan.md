@@ -1,79 +1,109 @@
 
 
-## Correções no TraffixPro
+## Painel do Cliente — Métricas, Relatórios e Período Personalizado
 
-### 1. De onde vêm os números (transparência)
+Reformular `/meu-painel` para ser uma central completa de acompanhamento do cliente, com métricas diárias, período flexível, escolha de métricas visíveis, registro de vendas e ROI calculado.
 
-Os dados de **gasto, impressões, cliques e conversões** vêm da **Graph API do Meta** (`/insights`), salvos na tabela `ad_insights`. O dashboard **soma os dias** do período escolhido.
+### 1. Período flexível
 
-**Por que aparecem 63 leads na M1D quando o Facebook mostra menos:**
+Hoje só existem botões "hoje / 7d / 30d". Vou substituir por um seletor mais completo:
 
-Hoje o sistema conta como "lead/conversão" praticamente **todo evento de conversão** que o Meta retorna, incluindo:
+- Botões rápidos: **Hoje**, **7 dias**, **30 dias**, **Este mês**, **Mês passado**
+- Opção **Personalizado** com dois campos de data (date pickers `react-day-picker` já presentes no projeto)
+- A data selecionada vira a base de TODAS as métricas, gráficos e ROI da tela
 
-- `lead`, `purchase`, `complete_registration` ✅ (corretos)
-- `onsite_conversion.*` (várias subcategorias)
-- `messaging_conversation_started_7d`
-- `add_to_cart`, `initiate_checkout`, `subscribe`, `start_trial`, `contact`
+Tecnicamente: `fetchDashboard` em `src/lib/dashboard.ts` ganha versão que aceita `since`/`until` diretos, em vez de apenas `Period`.
 
-**O problema:** o Meta retorna o mesmo lead em **vários action_types ao mesmo tempo** (ex.: um lead aparece como `lead` + `onsite_conversion.lead_grouped` + `offsite_conversion.fb_pixel_lead`). Ao somar tudo, o número fica inflado — daí os 63.
+### 2. Métricas principais sempre visíveis
 
-### 2. O que vou ajustar
+Cards fixos no topo, na ordem pedida:
 
-**A. Corrigir contagem de leads (mais fiel ao Meta)**
+1. Valor investido
+2. CPM
+3. Cliques
+4. CPC (custo por clique)
+5. CTR
+6. Mensagens no WhatsApp
+7. Custo por mensagem
+8. Vendas (somatório do valor)
+9. ROI = (Vendas − Investido) / Investido × 100
 
-Em `src/server/meta-integration.ts`, mudar a regra de conversão para:
+Para "Mensagens no WhatsApp" e "Custo por mensagem" vou ampliar o parser do Meta em `src/server/meta-integration.ts` para extrair também:
 
-- Priorizar **um único action_type por linha**, na ordem: `offsite_conversion.fb_pixel_lead` → `lead` → `onsite_conversion.lead_grouped` → `complete_registration` → `purchase`.
-- Não somar tipos sobrepostos.
-- Salvar também um campo `conversions_breakdown` no `raw` para auditoria.
+- `onsite_conversion.messaging_conversation_started_7d`
+- `onsite_conversion.total_messaging_connection`
 
-Resultado: o número passa a bater com o "Resultados" da coluna de leads no Gerenciador de Anúncios.
+E salvar essas contagens em uma nova coluna `messages` na tabela `ad_insights` (migration nova). Sem essa coluna não dá pra ter custo por mensagem real.
 
-**B. Botão "Ver relatório" que não abre**
+### 3. Métricas extras opcionais
 
-A rota `/clientes/$id` existe, mas o `<Link>` no card pode estar perdendo o clique por causa de outros elementos sobrepostos no card. Vou:
+Botão **Personalizar métricas** abre um popover com checkboxes:
 
-- Garantir que o link funciona como botão claro.
-- Adicionar fallback de `onClick` com `navigate({ to: "/clientes/$id", params: { id } })`.
-- Verificar se a rota carrega mesmo quando a conta ainda não tem dados (mostrar empty state em vez de tela em branco).
+- Impressões
+- Alcance
+- Conversões totais
+- CPL (custo por lead)
+- Frequência (impressões / alcance)
+- ROAS
 
-**C. Editar e excluir cliente**
+Seleção salva em `localStorage` por usuário, então da próxima vez já volta como ele deixou.
 
-Adicionar no card de cada cliente em `/clientes`:
+### 4. Métricas e gráfico diário
 
-- Botão **Editar** → abre dialog com nome, segmento, status (ativo/inativo).
-- Botão **Excluir** → dialog de confirmação. Ao confirmar:
-  - Desvincula contas de anúncio (`ad_accounts.client_id = null`).
-  - Apaga vendas do cliente (`sales`).
-  - Apaga o cliente.
-  - Não apaga o usuário de acesso (mantém na auth para histórico).
+Abaixo dos cards:
 
-**D. Pequenas melhorias de UX**
+- Gráfico de área diário (já existe) — adicionar toggle de métrica: investimento, cliques, mensagens, vendas
+- **Tabela diária** com uma linha por dia do período, colunas: data, investimento, cliques, CTR, mensagens, custo por mensagem, vendas do dia, ROI do dia
+- Botão **Exportar PDF** (usa `exportElementToPDF` que já existe em `src/lib/pdf.ts`) e **Exportar CSV**
 
-- Mostrar no card quantos leads vêm de quais contas vinculadas.
-- Tooltip explicando "Leads = soma das conversões registradas pelo Meta no período".
+### 5. Registro de vendas pelo próprio cliente
 
-### 3. Arquivos que serão alterados
+Já existe form básico. Vou melhorar:
 
-- `src/server/meta-integration.ts` — nova lógica de contagem de leads.
-- `src/routes/clientes.tsx` — botões editar/excluir + corrigir link "ver relatório".
-- `src/routes/clientes.$id.tsx` — empty state quando não houver dados.
-- Nova migration: nada estrutural, só re-sync vai recalcular.
+- Campos: **Data da venda** (date picker), **Valor da venda** (R$), **Quantidade** (default 1), **Observação** opcional
+- Lista das últimas 10 vendas com botão excluir
+- Vendas entram automaticamente no cálculo de ROI do período selecionado
 
-### 4. O que você precisa fazer depois
+RLS já permite cliente inserir/ver/excluir as próprias vendas (policy "Clients insert own sales" e "Clients view own sales"). Vou adicionar policy de DELETE para o cliente.
 
-1. Após o deploy, ir em **Integrações → Meta** e clicar em **Sincronizar** novamente na conta M1D.
-2. Os números de leads vão diminuir e bater com o Facebook.
-3. Testar Editar/Excluir cliente em `/clientes`.
+### 6. ROI no período
 
-### 5. Tutorial rápido do fluxo correto
+Cálculo direto:
 
-1. **Login** como admin.
-2. **Clientes** → criar cliente (ex.: "Empresa X").
-3. **Integrações → Meta** → Conectar Facebook → Importar contas.
-4. Na lista de contas, escolher o cliente no dropdown e **Salvar vínculo**.
-5. Clicar em **Sincronizar** (escolhe período: hoje / 7d / 30d).
-6. Voltar em **Clientes** → **Ver relatório** → ver KPIs reais.
-7. Para o cliente acessar sozinho: card do cliente → **Criar acesso** (email + senha).
-8. Cliente entra em `/auth`, faz login, vê apenas `/meu-painel` com seus dados.
+```
+ROI = ((soma de vendas no período) − (soma de gasto no período)) / gasto × 100
+```
+
+Mostrado como card destacado e também por dia na tabela.
+
+### 7. Mudanças técnicas resumidas
+
+**Migration nova:**
+- adicionar coluna `messages bigint default 0` em `ad_insights`
+- policy DELETE em `sales` para o próprio cliente
+
+**`src/server/meta-integration.ts`:**
+- extrair contagem de mensagens do WhatsApp/Messenger e gravar em `messages`
+
+**`src/lib/dashboard.ts`:**
+- aceitar `{ since, until }` arbitrário
+- retornar `messages` e `costPerMessage` no summary
+- retornar `daily` com `messages` e `salesValue` por dia
+
+**`src/routes/meu-painel.tsx`:**
+- novo seletor de período (rápido + personalizado)
+- 9 cards principais
+- popover "Personalizar métricas" com persistência em `localStorage`
+- gráfico com toggle de métrica
+- tabela diária
+- exportar PDF/CSV
+- form de venda melhorado + lista de vendas com excluir
+
+**Sem mudança visual no admin** — só o painel do cliente é afetado.
+
+### 8. O que você precisa fazer depois
+
+1. Ir em **Integrações → Meta** e clicar em **Sincronizar** novamente para popular a coluna `messages` com os dados de WhatsApp.
+2. Entrar como cliente em `/meu-painel` para ver as novas métricas.
+3. Registrar vendas pela própria tela do cliente para ver o ROI fechar.
 
