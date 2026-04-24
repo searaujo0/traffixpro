@@ -54,6 +54,71 @@ function ClientesPage() {
   const [accessPassword, setAccessPassword] = useState("");
   const [accessSubmitting, setAccessSubmitting] = useState(false);
   const createUserFn = useServerFn(createClientUser);
+  const updateClientFn = useServerFn(updateClient);
+  const deleteClientFn = useServerFn(deleteClient);
+  const navigate = useNavigate();
+
+  // Edit state
+  const [editClient, setEditClient] = useState<Row | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editSegment, setEditSegment] = useState("");
+  const [editStatus, setEditStatus] = useState<"ativo" | "inativo">("ativo");
+  const [editSubmitting, setEditSubmitting] = useState(false);
+
+  // Delete state
+  const [deleteTarget, setDeleteTarget] = useState<Row | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  function openEdit(c: Row) {
+    setEditClient(c);
+    setEditName(c.name);
+    setEditSegment(c.segment ?? "");
+    setEditStatus((c.status as "ativo" | "inativo") ?? "ativo");
+  }
+
+  async function handleEditSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editClient) return;
+    setEditSubmitting(true);
+    try {
+      const res = await updateClientFn({
+        data: {
+          id: editClient.id,
+          name: editName,
+          segment: editSegment.trim() || null,
+          status: editStatus,
+        },
+      });
+      if (res.error) toast.error(res.error);
+      else {
+        toast.success("Cliente atualizado");
+        setEditClient(null);
+        void load();
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao atualizar");
+    } finally {
+      setEditSubmitting(false);
+    }
+  }
+
+  async function handleDeleteConfirm() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const res = await deleteClientFn({ data: { id: deleteTarget.id } });
+      if (res.error) toast.error(res.error);
+      else {
+        toast.success("Cliente excluído");
+        setDeleteTarget(null);
+        void load();
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao excluir");
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   useEffect(() => {
     void load();
