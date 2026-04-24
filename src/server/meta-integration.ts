@@ -260,6 +260,19 @@ export const syncInsights = createServerFn({ method: "POST" })
           break;
         }
       }
+      // Mensagens (WhatsApp / Messenger / Instagram Direct)
+      const messagePriority = [
+        "onsite_conversion.messaging_conversation_started_7d",
+        "onsite_conversion.total_messaging_connection",
+        "onsite_conversion.messaging_first_reply",
+      ];
+      let messages = 0;
+      for (const key of messagePriority) {
+        if (byType.has(key)) {
+          messages = byType.get(key) || 0;
+          break;
+        }
+      }
       const breakdown = Object.fromEntries(byType);
       return {
         ad_account_id: data.adAccountId,
@@ -270,6 +283,7 @@ export const syncInsights = createServerFn({ method: "POST" })
         clicks: Number(d.clicks || 0),
         ctr: Number(d.ctr || 0),
         conversions,
+        messages,
         raw: { ...d, conversions_breakdown: breakdown, conversion_source: conversionSource },
       };
     });

@@ -8,10 +8,13 @@ export type DashboardSummary = {
   reach: number;
   clicks: number;
   conversions: number;
+  messages: number;
   ctr: number;
   cpc: number;
   cpm: number;
   cpl: number;
+  costPerMessage: number;
+  frequency: number;
   revenue: number;
   salesCount: number;
   roi: number;
@@ -25,6 +28,8 @@ export type DailyPoint = {
   conversions: number;
   clicks: number;
   impressions: number;
+  messages: number;
+  salesValue: number;
 };
 
 export type AccountPerformance = {
@@ -56,14 +61,14 @@ function rangeFor(period: Period): { since: string; until: string } {
 }
 
 export async function fetchDashboard(
-  period: Period,
+  period: Period | { since: string; until: string },
   clientId?: string,
 ): Promise<{ summary: DashboardSummary; daily: DailyPoint[] }> {
-  const { since, until } = rangeFor(period);
+  const { since, until } = typeof period === "string" ? rangeFor(period) : period;
 
   let insightsQuery = supabase
     .from("ad_insights")
-    .select("date, spend, impressions, reach, clicks, conversions, ad_account_id, ad_accounts!inner(client_id)")
+    .select("date, spend, impressions, reach, clicks, conversions, messages, ad_account_id, ad_accounts!inner(client_id)")
     .gte("date", since)
     .lte("date", until)
     .order("date", { ascending: true });
@@ -88,6 +93,7 @@ export async function fetchDashboard(
   let reach = 0;
   let clicks = 0;
   let conversions = 0;
+  let messages = 0;
 
   for (const r of insights ?? []) {
     const row = r as unknown as {
@@ -97,43 +103,53 @@ export async function fetchDashboard(
       reach: number | string;
       clicks: number | string;
       conversions: number | string;
+      messages?: number | string | null;
     };
     const s = Number(row.spend);
     const im = Number(row.impressions);
     const re = Number(row.reach);
     const cl = Number(row.clicks);
     const co = Number(row.conversions);
+    const msg = Number(row.messages ?? 0);
     spend += s;
     impressions += im;
     reach += re;
     clicks += cl;
     conversions += co;
-    const cur = dailyMap.get(row.date) ?? { date: row.date, spend: 0, conversions: 0, clicks: 0, impressions: 0 };
+    messages += msg;
+    const cur = dailyMap.get(row.date) ?? { date: row.date, spend: 0, conversions: 0, clicks: 0, impressions: 0, messages: 0, salesValue: 0 };
     cur.spend += s;
     cur.conversions += co;
     cur.clicks += cl;
     cur.impressions += im;
+    cur.messages += msg;
     dailyMap.set(row.date, cur);
   }
 
   let revenue = 0;
   let salesCount = 0;
   for (const s of sales ?? []) {
-    const row = s as unknown as { quantity: number; unit_value: number | string };
-    revenue += Number(row.quantity) * Number(row.unit_value);
+    const row = s as unknown as { quantity: number; unit_value: number | string; sale_date: string };
+    const value = Number(row.quantity) * Number(row.unit_value);
+    revenue += value;
     salesCount += Number(row.quantity);
+    const cur = dailyMap.get(row.sale_date) ?? { date: row.sale_date, spend: 0, conversions: 0, clicks: 0, impressions: 0, messages: 0, salesValue: 0 };
+    cur.salesValue += value;
+    dailyMap.set(row.sale_date, cur);
   }
 
   const ctr = impressions ? (clicks / impressions) * 100 : 0;
   const cpc = clicks ? spend / clicks : 0;
   const cpm = impressions ? (spend / impressions) * 1000 : 0;
   const cpl = conversions ? spend / conversions : 0;
+  const costPerMessage = messages ? spend / messages : 0;
+  const frequency = reach ? impressions / reach : 0;
   const roi = spend ? ((revenue - spend) / spend) * 100 : 0;
   const roas = spend ? revenue / spend : 0;
   const daily = Array.from(dailyMap.values()).sort((a, b) => a.date.localeCompare(b.date));
 
   return {
-    summary: { spend, impressions, reach, clicks, conversions, ctr, cpc, cpm, cpl, revenue, salesCount, roi, roas, hasData: (insights?.length ?? 0) > 0 || (sales?.length ?? 0) > 0 },
+    summary: { spend, impressions, reach, clicks, conversions, messages, ctr, cpc, cpm, cpl, costPerMessage, frequency, revenue, salesCount, roi, roas, hasData: (insights?.length ?? 0) > 0 || (sales?.length ?? 0) > 0 },
     daily,
   };
 }
