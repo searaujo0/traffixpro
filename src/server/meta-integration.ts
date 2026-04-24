@@ -237,9 +237,30 @@ export const syncInsights = createServerFn({ method: "POST" })
     }
 
     const rows = (json.data || []).map((d: any) => {
-      const conversions = (d.actions || [])
-        .filter((a: any) => /purchase|lead|complete_registration|onsite_conversion|messaging_conversation|contact|submit_application|subscribe|start_trial|add_to_cart|initiate_checkout/i.test(a.action_type))
-        .reduce((s: number, a: any) => s + Number(a.value || 0), 0);
+      // Conta apenas UM action_type por linha, na prioridade abaixo,
+      // para não inflar o número (Meta retorna o mesmo lead em vários tipos).
+      const actions: Array<{ action_type: string; value: string | number }> = d.actions || [];
+      const byType = new Map<string, number>();
+      for (const a of actions) byType.set(a.action_type, Number(a.value || 0));
+      const priority = [
+        "offsite_conversion.fb_pixel_lead",
+        "lead",
+        "onsite_conversion.lead_grouped",
+        "complete_registration",
+        "offsite_conversion.fb_pixel_complete_registration",
+        "purchase",
+        "offsite_conversion.fb_pixel_purchase",
+      ];
+      let conversions = 0;
+      let conversionSource: string | null = null;
+      for (const key of priority) {
+        if (byType.has(key)) {
+          conversions = byType.get(key) || 0;
+          conversionSource = key;
+          break;
+        }
+      }
+      const breakdown = Object.fromEntries(byType);
       return {
         ad_account_id: data.adAccountId,
         date: d.date_start,
@@ -249,7 +270,7 @@ export const syncInsights = createServerFn({ method: "POST" })
         clicks: Number(d.clicks || 0),
         ctr: Number(d.ctr || 0),
         conversions,
-        raw: d,
+        raw: { ...d, conversions_breakdown: breakdown, conversion_source: conversionSource },
       };
     });
 
