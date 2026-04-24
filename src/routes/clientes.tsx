@@ -308,13 +308,31 @@ function ClientesPage() {
                 </div>
 
                 <div className="mt-4 flex items-center gap-2">
-                  <Link
-                    to="/clientes/$id"
-                    params={{ id: c.id }}
-                    className="flex-1 inline-flex items-center justify-center gap-2 text-xs font-medium text-primary hover:underline"
+                  <button
+                    type="button"
+                    onClick={() => navigate({ to: "/clientes/$id", params: { id: c.id } })}
+                    className="flex-1 inline-flex items-center justify-center gap-2 px-3 h-9 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition"
                   >
                     Ver relatório <ExternalLink className="h-3 w-3" />
-                  </Link>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openEdit(c)}
+                    title="Editar cliente"
+                    className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-secondary transition"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeleteTarget(c)}
+                    title="Excluir cliente"
+                    className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-border text-muted-foreground hover:text-destructive hover:border-destructive/40 transition"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                <div className="mt-2 flex items-center justify-end">
                   {c.owner_user_id ? (
                     <span className="inline-flex items-center gap-1 text-[10px] text-success">
                       <Check className="h-3 w-3" /> Acesso ativo
@@ -326,7 +344,7 @@ function ClientesPage() {
                         setAccessEmail("");
                         setAccessPassword("");
                       }}
-                      className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+                      className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground hover:text-foreground"
                     >
                       <KeyRound className="h-3 w-3" /> Criar acesso
                     </button>
