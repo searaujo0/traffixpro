@@ -1,17 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-
-async function assertAdmin(userId: string) {
-  const { data, error } = await supabaseAdmin
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", userId)
-    .eq("role", "admin")
-    .maybeSingle();
-  if (error || !data) throw new Error("Apenas admins.");
-}
+import {
+  ADMIN_RUNTIME_UNAVAILABLE_MESSAGE,
+  assertAdminAccess,
+  getAdminClientSafe,
+} from "@/server/admin-runtime";
 
 export type ManagedUser = {
   id: string;
@@ -26,9 +20,17 @@ export type ManagedUser = {
 export const listUsers = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await assertAdmin(context.userId);
+    const adminAccess = await assertAdminAccess(context.supabase, context.userId);
+    if (!adminAccess.ok) {
+      return { error: adminAccess.error, users: [] as ManagedUser[] };
+    }
 
-    const { data: usersData, error: usersErr } = await supabaseAdmin.auth.admin.listUsers({
+    const adminClient = getAdminClientSafe();
+    if (!adminClient) {
+      return { error: ADMIN_RUNTIME_UNAVAILABLE_MESSAGE, users: [] as ManagedUser[] };
+    }
+
+    const { data: usersData, error: usersErr } = await adminClient.auth.admin.listUsers({
       page: 1,
       perPage: 200,
     });
@@ -36,8 +38,8 @@ export const listUsers = createServerFn({ method: "POST" })
 
     const ids = usersData.users.map((u) => u.id);
     const [{ data: roles }, { data: clients }] = await Promise.all([
-      supabaseAdmin.from("user_roles").select("user_id, role").in("user_id", ids),
-      supabaseAdmin.from("clients").select("id, name, owner_user_id").in("owner_user_id", ids),
+      adminClient.from("user_roles").select("user_id, role").in("user_id", ids),
+      adminClient.from("clients").select("id, name, owner_user_id").in("owner_user_id", ids),
     ]);
 
     const roleMap = new Map((roles ?? []).map((r) => [r.user_id, r.role]));
@@ -70,14 +72,19 @@ export const setUserRole = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => setRoleSchema.parse(i))
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.userId);
+    const adminAccess = await assertAdminAccess(context.supabase, context.userId);
+    if (!adminAccess.ok) return { error: adminAccess.error };
+
+    const adminClient = getAdminClientSafe();
+    if (!adminClient) return { error: ADMIN_RUNTIME_UNAVAILABLE_MESSAGE };
+
     // remove roles existentes do usuário e insere a nova (mantém simples: 1 role)
-    const { error: delErr } = await supabaseAdmin
+    const { error: delErr } = await adminClient
       .from("user_roles")
       .delete()
       .eq("user_id", data.userId);
     if (delErr) return { error: delErr.message };
-    const { error: insErr } = await supabaseAdmin
+    const { error: insErr } = await adminClient
       .from("user_roles")
       .insert({ user_id: data.userId, role: data.role });
     if (insErr) return { error: insErr.message };
@@ -93,8 +100,13 @@ export const resetUserPassword = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => resetPwSchema.parse(i))
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.userId);
-    const { error } = await supabaseAdmin.auth.admin.updateUserById(data.userId, {
+    const adminAccess = await assertAdminAccess(context.supabase, context.userId);
+    if (!adminAccess.ok) return { error: adminAccess.error };
+
+    const adminClient = getAdminClientSafe();
+    if (!adminClient) return { error: ADMIN_RUNTIME_UNAVAILABLE_MESSAGE };
+
+    const { error } = await adminClient.auth.admin.updateUserById(data.userId, {
       password: data.newPassword,
     });
     if (error) return { error: error.message };
@@ -107,17 +119,22 @@ export const deleteUser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => deleteUserSchema.parse(i))
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.userId);
+    const adminAccess = await assertAdminAccess(context.supabase, context.userId);
+    if (!adminAccess.ok) return { error: adminAccess.error };
+
+    const adminClient = getAdminClientSafe();
+    if (!adminClient) return { error: ADMIN_RUNTIME_UNAVAILABLE_MESSAGE };
+
     if (data.userId === context.userId) {
       return { error: "Você não pode deletar sua própria conta." };
     }
     // desvincula clientes
-    await supabaseAdmin
+    await adminClient
       .from("clients")
       .update({ owner_user_id: null })
       .eq("owner_user_id", data.userId);
-    await supabaseAdmin.from("user_roles").delete().eq("user_id", data.userId);
-    const { error } = await supabaseAdmin.auth.admin.deleteUser(data.userId);
+    await adminClient.from("user_roles").delete().eq("user_id", data.userId);
+    const { error } = await adminClient.auth.admin.deleteUser(data.userId);
     if (error) return { error: error.message };
     return { success: true };
   });
