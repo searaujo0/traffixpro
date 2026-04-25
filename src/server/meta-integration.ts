@@ -222,7 +222,7 @@ export const syncInsights = createServerFn({ method: "POST" })
       `${GRAPH}/${data.adAccountId}/insights?` +
       `time_increment=1` +
       `&time_range=${encodeURIComponent(JSON.stringify({ since, until }))}` +
-      `&fields=date_start,spend,impressions,reach,clicks,ctr,actions` +
+      `&fields=date_start,spend,impressions,reach,clicks,inline_link_clicks,ctr,actions` +
       `&limit=500&access_token=${conn.access_token}`;
 
     const res = await fetch(url);
@@ -262,8 +262,8 @@ export const syncInsights = createServerFn({ method: "POST" })
       }
       // Mensagens (WhatsApp / Messenger / Instagram Direct)
       const messagePriority = [
-        "onsite_conversion.messaging_conversation_started_7d",
         "onsite_conversion.total_messaging_connection",
+        "onsite_conversion.messaging_conversation_started_7d",
         "onsite_conversion.messaging_first_reply",
       ];
       let messages = 0;
@@ -274,17 +274,31 @@ export const syncInsights = createServerFn({ method: "POST" })
         }
       }
       const breakdown = Object.fromEntries(byType);
+      // Cliques no link (o que o Facebook Ads Manager mostra por padrão)
+      const linkClicks = Number(d.inline_link_clicks ?? 0);
+      const totalClicks = Number(d.clicks || 0);
+      const impressionsNum = Number(d.impressions || 0);
+      const spendNum = Number(d.spend || 0);
+      // Recalcula CTR com base em link clicks (mesmo critério do Ads Manager)
+      const ctrLink = impressionsNum ? (linkClicks / impressionsNum) * 100 : 0;
       return {
         ad_account_id: data.adAccountId,
         date: d.date_start,
-        spend: Number(d.spend || 0),
-        impressions: Number(d.impressions || 0),
+        spend: spendNum,
+        impressions: impressionsNum,
         reach: Number(d.reach || 0),
-        clicks: Number(d.clicks || 0),
-        ctr: Number(d.ctr || 0),
+        // Salva LINK CLICKS como métrica principal (alinhado ao Facebook Ads Manager)
+        clicks: linkClicks || totalClicks,
+        ctr: ctrLink || Number(d.ctr || 0),
         conversions,
         messages,
-        raw: { ...d, conversions_breakdown: breakdown, conversion_source: conversionSource },
+        raw: {
+          ...d,
+          conversions_breakdown: breakdown,
+          conversion_source: conversionSource,
+          all_clicks: totalClicks,
+          link_clicks: linkClicks,
+        },
       };
     });
 
