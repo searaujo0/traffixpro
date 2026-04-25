@@ -105,18 +105,18 @@ function RelatoriosPage() {
                   <AreaChart data={daily.map((d) => ({ ...d, dateLabel: dateBR(d.date) }))}>
                     <defs>
                       <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="oklch(0.7 0.18 265)" stopOpacity={0.5} />
-                        <stop offset="100%" stopColor="oklch(0.7 0.18 265)" stopOpacity={0} />
+                        <stop offset="0%" stopColor="#6366f1" stopOpacity={0.5} />
+                        <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 0.06)" />
-                    <XAxis dataKey="dateLabel" stroke="oklch(0.68 0.03 260)" fontSize={11} tickLine={false} axisLine={false} />
-                    <YAxis stroke="oklch(0.68 0.03 260)" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => brl(v)} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.06)" />
+                    <XAxis dataKey="dateLabel" stroke="#8a94a6" fontSize={11} tickLine={false} axisLine={false} />
+                    <YAxis stroke="#8a94a6" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => brl(v)} />
                     <Tooltip
-                      contentStyle={{ background: "oklch(0.205 0.022 265)", border: "1px solid oklch(1 0 0 / 0.1)", borderRadius: 12, fontSize: 12 }}
+                      contentStyle={{ background: "#161b22", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: 12, fontSize: 12 }}
                       formatter={((value: unknown) => [brl(Number(value)), "Investimento"]) as never}
                     />
-                    <Area type="monotone" dataKey="spend" stroke="oklch(0.7 0.18 265)" strokeWidth={2} fill="url(#g1)" />
+                    <Area type="monotone" dataKey="spend" stroke="#6366f1" strokeWidth={2} fill="url(#g1)" />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>

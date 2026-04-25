@@ -74,64 +74,64 @@
   /* Default to dark theme — this is a SaaS dark product */
   --radius: 0.875rem;
 
-  --background: oklch(0.16 0.02 265);
-  --foreground: oklch(0.97 0.01 250);
+  --background: rgb(9, 13, 22);
+  --foreground: rgb(240, 246, 252);
 
-  --card: oklch(0.205 0.022 265);
-  --card-foreground: oklch(0.97 0.01 250);
-  --popover: oklch(0.205 0.022 265);
-  --popover-foreground: oklch(0.97 0.01 250);
+  --card: rgb(18, 23, 33);
+  --card-foreground: rgb(240, 246, 252);
+  --popover: rgb(18, 23, 33);
+  --popover-foreground: rgb(240, 246, 252);
 
-  --primary: oklch(0.7 0.18 265);
-  --primary-foreground: oklch(0.16 0.02 265);
-  --primary-glow: oklch(0.78 0.19 280);
+  --primary: rgb(102, 152, 255);
+  --primary-foreground: rgb(9, 13, 22);
+  --primary-glow: rgb(162, 165, 255);
 
-  --secondary: oklch(0.27 0.03 265);
-  --secondary-foreground: oklch(0.97 0.01 250);
+  --secondary: rgb(31, 38, 53);
+  --secondary-foreground: rgb(240, 246, 252);
 
-  --muted: oklch(0.24 0.025 265);
-  --muted-foreground: oklch(0.68 0.03 260);
+  --muted: rgb(25, 31, 43);
+  --muted-foreground: rgb(142, 153, 171);
 
-  --accent: oklch(0.78 0.17 165);
-  --accent-foreground: oklch(0.16 0.02 265);
+  --accent: rgb(0, 216, 156);
+  --accent-foreground: rgb(9, 13, 22);
 
-  --destructive: oklch(0.65 0.22 25);
-  --destructive-foreground: oklch(0.98 0.01 250);
+  --destructive: rgb(249, 65, 68);
+  --destructive-foreground: rgb(244, 249, 255);
 
-  --success: oklch(0.74 0.17 160);
-  --success-foreground: oklch(0.16 0.02 265);
+  --success: rgb(0, 202, 133);
+  --success-foreground: rgb(9, 13, 22);
 
-  --warning: oklch(0.8 0.16 75);
-  --warning-foreground: oklch(0.16 0.02 265);
+  --warning: rgb(249, 173, 38);
+  --warning-foreground: rgb(9, 13, 22);
 
-  --border: oklch(1 0 0 / 8%);
-  --input: oklch(1 0 0 / 10%);
-  --ring: oklch(0.7 0.18 265);
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.1);
+  --ring: rgb(102, 152, 255);
 
-  --chart-1: oklch(0.7 0.18 265);   /* azul/roxo - investimento */
-  --chart-2: oklch(0.78 0.17 165);  /* verde - conversas */
-  --chart-3: oklch(0.78 0.19 305);  /* roxo */
-  --chart-4: oklch(0.8 0.16 75);    /* amarelo */
-  --chart-5: oklch(0.7 0.2 25);     /* laranja */
+  --chart-1: rgb(102, 152, 255);   /* azul/roxo - investimento */
+  --chart-2: rgb(0, 216, 156);  /* verde - conversas */
+  --chart-3: rgb(212, 147, 255);  /* roxo */
+  --chart-4: rgb(249, 173, 38);    /* amarelo */
+  --chart-5: rgb(255, 95, 91);     /* laranja */
 
-  --sidebar: oklch(0.185 0.022 265);
-  --sidebar-foreground: oklch(0.92 0.015 250);
-  --sidebar-primary: oklch(0.7 0.18 265);
-  --sidebar-primary-foreground: oklch(0.16 0.02 265);
-  --sidebar-accent: oklch(0.25 0.03 265);
-  --sidebar-accent-foreground: oklch(0.97 0.01 250);
-  --sidebar-border: oklch(1 0 0 / 6%);
-  --sidebar-ring: oklch(0.7 0.18 265);
+  --sidebar: rgb(14, 19, 29);
+  --sidebar-foreground: rgb(221, 230, 238);
+  --sidebar-primary: rgb(102, 152, 255);
+  --sidebar-primary-foreground: rgb(9, 13, 22);
+  --sidebar-accent: rgb(27, 33, 48);
+  --sidebar-accent-foreground: rgb(240, 246, 252);
+  --sidebar-border: rgba(255, 255, 255, 0.06);
+  --sidebar-ring: rgb(102, 152, 255);
 
   /* Gradients & shadows */
-  --gradient-primary: linear-gradient(135deg, oklch(0.7 0.18 265), oklch(0.78 0.19 305));
-  --gradient-success: linear-gradient(135deg, oklch(0.74 0.17 160), oklch(0.78 0.17 195));
-  --gradient-card: linear-gradient(180deg, oklch(0.215 0.025 265), oklch(0.19 0.022 265));
-  --gradient-glow: radial-gradient(ellipse at top, oklch(0.7 0.18 265 / 0.18), transparent 60%);
+  --gradient-primary: linear-gradient(135deg, rgb(102, 152, 255), rgb(212, 147, 255));
+  --gradient-success: linear-gradient(135deg, rgb(0, 202, 133), rgb(0, 215, 217));
+  --gradient-card: linear-gradient(180deg, rgb(20, 25, 37), rgb(15, 20, 30));
+  --gradient-glow: radial-gradient(ellipse at top, rgba(102, 152, 255, 0.18), transparent 60%);
 
-  --shadow-glow: 0 0 40px -8px oklch(0.7 0.18 265 / 0.45);
-  --shadow-card: 0 8px 30px -12px oklch(0 0 0 / 0.6);
-  --shadow-elevated: 0 20px 50px -20px oklch(0 0 0 / 0.7);
+  --shadow-glow: 0 0 40px -8px rgba(102, 152, 255, 0.45);
+  --shadow-card: 0 8px 30px -12px rgba(0, 0, 0, 0.6);
+  --shadow-elevated: 0 20px 50px -20px rgba(0, 0, 0, 0.7);
 
   --transition-smooth: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }

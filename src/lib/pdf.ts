@@ -1,14 +1,19 @@
 import { jsPDF } from "jspdf";
-import html2canvas from "html2canvas";
 
 export async function exportElementToPDF(element: HTMLElement, filename: string, title: string) {
-  // Forçar fundo claro temporário para captura legível
-  const canvas = await html2canvas(element, {
+  // Use html-to-image dynamically to avoid SSR issues and support modern CSS (oklab/oklch)
+  const { toPng } = await import("html-to-image");
+
+  const scale = 2;
+  const imgData = await toPng(element, {
     backgroundColor: "#0a0e1a",
-    scale: 2,
-    useCORS: true,
+    pixelRatio: scale,
+    style: {
+      transform: "scale(1)",
+      transformOrigin: "top left",
+    }
   });
-  const imgData = canvas.toDataURL("image/png");
+
   const pdf = new jsPDF("p", "mm", "a4");
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
@@ -27,7 +32,7 @@ export async function exportElementToPDF(element: HTMLElement, filename: string,
 
   // Body image
   const imgWidth = pageWidth - 16;
-  const imgHeight = (canvas.height * imgWidth) / canvas.width;
+  const imgHeight = (element.clientHeight * imgWidth) / element.clientWidth;
   let heightLeft = imgHeight;
   let position = 26;
 

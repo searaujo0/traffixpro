@@ -379,11 +379,11 @@ function ClientPanel() {
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={daily.map((d) => ({ ...d, dateLabel: dateBR(d.date) }))}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 0.06)" />
-                    <XAxis dataKey="dateLabel" stroke="oklch(0.68 0.03 260)" fontSize={11} tickLine={false} axisLine={false} />
-                    <YAxis stroke="oklch(0.68 0.03 260)" fontSize={11} tickLine={false} axisLine={false} />
-                    <Tooltip contentStyle={{ background: "oklch(0.205 0.022 265)", border: "1px solid oklch(1 0 0 / 0.1)", borderRadius: 12, fontSize: 12 }} />
-                    <Area type="monotone" dataKey={chartMetric} stroke="oklch(0.7 0.18 265)" fill="oklch(0.7 0.18 265 / 0.18)" strokeWidth={2} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.06)" />
+                    <XAxis dataKey="dateLabel" stroke="#8a94a6" fontSize={11} tickLine={false} axisLine={false} />
+                    <YAxis stroke="#8a94a6" fontSize={11} tickLine={false} axisLine={false} />
+                    <Tooltip contentStyle={{ background: "#161b22", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: 12, fontSize: 12 }} />
+                    <Area type="monotone" dataKey={chartMetric} stroke="#6366f1" fill="rgba(99, 102, 241, 0.18)" strokeWidth={2} />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>

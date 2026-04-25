@@ -217,22 +217,22 @@ function DashboardPage() {
                   >
                     <defs>
                       <linearGradient id="gradSpend" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="oklch(0.7 0.18 265)" stopOpacity={0.5} />
-                        <stop offset="100%" stopColor="oklch(0.7 0.18 265)" stopOpacity={0} />
+                        <stop offset="0%" stopColor="#6366f1" stopOpacity={0.5} />
+                        <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
                       </linearGradient>
                       <linearGradient id="gradConv" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="oklch(0.78 0.17 165)" stopOpacity={0.5} />
-                        <stop offset="100%" stopColor="oklch(0.78 0.17 165)" stopOpacity={0} />
+                        <stop offset="0%" stopColor="#10b981" stopOpacity={0.5} />
+                        <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 0.06)" />
-                    <XAxis dataKey="dateLabel" stroke="oklch(0.68 0.03 260)" fontSize={11} tickLine={false} axisLine={false} />
-                    <YAxis yAxisId="left" stroke="oklch(0.68 0.03 260)" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => brl(v)} />
-                    <YAxis yAxisId="right" orientation="right" stroke="oklch(0.68 0.03 260)" fontSize={11} tickLine={false} axisLine={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.06)" />
+                    <XAxis dataKey="dateLabel" stroke="#8a94a6" fontSize={11} tickLine={false} axisLine={false} />
+                    <YAxis yAxisId="left" stroke="#8a94a6" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => brl(v)} />
+                    <YAxis yAxisId="right" orientation="right" stroke="#8a94a6" fontSize={11} tickLine={false} axisLine={false} />
                     <Tooltip
                       contentStyle={{
-                        background: "oklch(0.205 0.022 265)",
-                        border: "1px solid oklch(1 0 0 / 0.1)",
+                        background: "#161b22",
+                        border: "1px solid rgba(255, 255, 255, 0.1)",
                         borderRadius: 12,
                         fontSize: 12,
                       }}
@@ -243,8 +243,8 @@ function DashboardPage() {
                         return [num(v), n];
                       }) as never}
                     />
-                    <Area yAxisId="left" type="monotone" dataKey="spend" name="Investimento" stroke="oklch(0.7 0.18 265)" strokeWidth={2} fill="url(#gradSpend)" />
-                    <Area yAxisId="right" type="monotone" dataKey="conversions" name="Leads" stroke="oklch(0.78 0.17 165)" strokeWidth={2} fill="url(#gradConv)" />
+                    <Area yAxisId="left" type="monotone" dataKey="spend" name="Investimento" stroke="#6366f1" strokeWidth={2} fill="url(#gradSpend)" />
+                    <Area yAxisId="right" type="monotone" dataKey="conversions" name="Leads" stroke="#10b981" strokeWidth={2} fill="url(#gradConv)" />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
