@@ -1,5 +1,5 @@
 import { createFileRoute, useParams, Link } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft, Download, Link2, Loader2, TrendingUp, Wallet, Target, ShoppingBag, MousePointerClick, Eye, Users, MessageCircle } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { KpiCard } from "@/components/KpiCard";
@@ -7,7 +7,7 @@ import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YA
 import { fetchClient, fetchSales, type ClientRow, type SaleRow } from "@/lib/data";
 import { fetchAccountPerformance, fetchDashboard, type AccountPerformance, type DailyPoint, type DashboardSummary } from "@/lib/dashboard";
 import { brl, brlPrecise, dateBR, num, pct } from "@/lib/format";
-import { exportElementToPDF } from "@/lib/pdf";
+import { generateClientReportPDF } from "@/lib/clientReportPdf";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/clientes/$id")({
@@ -28,7 +28,6 @@ function ClientDetailPage() {
   const [accounts, setAccounts] = useState<AccountPerformance[]>([]);
   const [sales, setSales] = useState<SaleRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const reportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     void load();
@@ -61,12 +60,20 @@ function ClientDetailPage() {
   }
 
   async function handleExport() {
-    if (!reportRef.current || !client) return;
-    toast.info("Gerando PDF...");
+    if (!client || !summary) return;
+    toast.info("Gerando relatório PDF...");
     try {
-      await exportElementToPDF(reportRef.current, `relatorio-${client.name.toLowerCase().replace(/\s+/g, "-")}.pdf`, `Relatório • ${client.name}`);
-      toast.success("PDF gerado");
-    } catch {
+      await generateClientReportPDF({
+        client,
+        summary,
+        daily,
+        accounts,
+        sales,
+        periodLabel: "Últimos 30 dias",
+      });
+      toast.success("Relatório gerado");
+    } catch (e) {
+      console.error(e);
       toast.error("Erro ao gerar PDF");
     }
   }
@@ -104,7 +111,7 @@ function ClientDetailPage() {
             </div>
           </div>
 
-          <div ref={reportRef} className="space-y-6 bg-background">
+          <div className="space-y-6 bg-background">
             <ClientReport client={client} summary={summary} daily={daily} accounts={accounts} sales={sales} />
           </div>
         </div>
