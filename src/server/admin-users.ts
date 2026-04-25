@@ -1,7 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import {
+  ADMIN_RUNTIME_UNAVAILABLE_MESSAGE,
+  assertAdminAccess,
+  getAdminClientSafe,
+} from "@/server/admin-runtime";
 
 const createClientUserSchema = z.object({
   email: z.string().email().max(255),
@@ -14,21 +18,16 @@ export const createClientUser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => createClientUserSchema.parse(input))
   .handler(async ({ data, context }) => {
-    const { userId } = context;
-
-    // Verifica que o chamador é admin
-    const { data: roleRow, error: roleErr } = await supabaseAdmin
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId)
-      .eq("role", "admin")
-      .maybeSingle();
-    if (roleErr || !roleRow) {
-      return { error: "Apenas admins podem criar acessos." };
+    const adminAccess = await assertAdminAccess(context.supabase, context.userId);
+    if (!adminAccess.ok) {
+      return { error: adminAccess.error };
     }
 
+    const adminClient = getAdminClientSafe();
+    if (!adminClient) return { error: ADMIN_RUNTIME_UNAVAILABLE_MESSAGE };
+
     // Cria usuário já confirmado
-    const { data: created, error: createErr } = await supabaseAdmin.auth.admin.createUser({
+    const { data: created, error: createErr } = await adminClient.auth.admin.createUser({
       email: data.email,
       password: data.password,
       email_confirm: true,
@@ -42,13 +41,13 @@ export const createClientUser = createServerFn({ method: "POST" })
 
     // Garante profile com nome (caso o trigger não esteja ativo)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabaseAdmin.from("profiles" as any) as any).upsert(
+    await (adminClient.from("profiles" as any) as any).upsert(
       { user_id: newUserId, full_name: data.fullName },
       { onConflict: "user_id" },
     );
 
     // Atribui role cliente
-    const { error: roleInsertErr } = await supabaseAdmin
+    const { error: roleInsertErr } = await adminClient
       .from("user_roles")
       .insert({ user_id: newUserId, role: "cliente" });
     if (roleInsertErr) {
@@ -56,7 +55,7 @@ export const createClientUser = createServerFn({ method: "POST" })
     }
 
     // Vincula ao cliente
-    const { error: linkErr } = await supabaseAdmin
+    const { error: linkErr } = await adminClient
       .from("clients")
       .update({ owner_user_id: newUserId })
       .eq("id", data.clientId);
