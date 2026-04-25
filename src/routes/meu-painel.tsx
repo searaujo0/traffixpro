@@ -69,6 +69,22 @@ function rangeFromQuick(q: QuickRange): { since: string; until: string } {
   return { since: today, until: today };
 }
 
+function formatPeriodLabel(since: string, until: string, quick: QuickRange): string {
+  const labels: Record<QuickRange, string> = {
+    today: "Hoje",
+    "7d": "Últimos 7 dias",
+    "30d": "Últimos 30 dias",
+    thisMonth: "Este mês",
+    lastMonth: "Mês passado",
+    custom: "Período personalizado",
+  };
+  const fmt = (iso: string) => {
+    const [y, m, d] = iso.split("-");
+    return `${d}/${m}/${y}`;
+  };
+  return `${labels[quick]} (${fmt(since)} a ${fmt(until)})`;
+}
+
 function ClientPanel() {
   const { user, profile, role, loading: authLoading, signOut } = useAuth();
   const navigate = useNavigate();
