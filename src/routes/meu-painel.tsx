@@ -16,7 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { fetchDashboard, type DailyPoint, type DashboardSummary } from "@/lib/dashboard";
-import { exportElementToPDF } from "@/lib/pdf";
+import { generateClientReportPDF } from "@/lib/clientReportPdf";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { cn } from "@/lib/utils";
 
@@ -186,13 +186,30 @@ function ClientPanel() {
   async function handleLogout() { await signOut(); navigate({ to: "/auth" }); }
 
   async function exportPDF() {
-    if (!reportRef.current) return;
+    if (!client || !summary) { toast.error("Sem dados para exportar"); return; }
+    toast.info("Gerando relatório PDF...");
     try {
-      await exportElementToPDF(
-        reportRef.current,
-        `relatorio-${client?.name || "cliente"}-${range.since}-${range.until}.pdf`,
-        `Relatório ${range.since} a ${range.until}`,
-      );
+      await generateClientReportPDF({
+        client: {
+          id: client.id,
+          name: client.name,
+          segment: null,
+          status: "active",
+          contact_email: null,
+          contact_phone: null,
+          monthly_budget: null,
+          owner_id: null,
+          notes: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        } as any,
+        summary,
+        daily,
+        accounts: [],
+        sales: sales as any,
+        periodLabel: formatPeriodLabel(range.since, range.until, quick),
+      });
+      toast.success("Relatório gerado");
     } catch (e) { console.error(e); toast.error("Falha ao gerar PDF"); }
   }
 
