@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { META_METRIC_LABELS } from "@/lib/metaLabels";
 
 export type Period = "today" | "7d" | "30d";
 
@@ -20,6 +21,8 @@ export type DashboardSummary = {
   roi: number;
   roas: number;
   hasData: boolean;
+  /** Nome do "Resultado" no período (ex.: "Leads", "Conversas iniciadas"). */
+  resultLabel: string;
 };
 
 export type DailyPoint = {
@@ -50,6 +53,8 @@ export type AccountPerformance = {
   ctr: number;
   cpc: number;
   cpl: number;
+  /** Rótulo do "Resultado" mais frequente para esta conta no período. */
+  resultLabel: string;
 };
 
 function rangeFor(period: Period): { since: string; until: string } {
@@ -94,6 +99,7 @@ export async function fetchDashboard(
   let clicks = 0;
   let conversions = 0;
   let messages = 0;
+  const labelCount = new Map<string, number>();
 
   for (const r of insights ?? []) {
     const row = r as unknown as {
@@ -104,6 +110,7 @@ export async function fetchDashboard(
       clicks: number | string;
       conversions: number | string;
       messages?: number | string | null;
+      result_label?: string | null;
     };
     const s = Number(row.spend);
     const im = Number(row.impressions);
@@ -117,6 +124,9 @@ export async function fetchDashboard(
     clicks += cl;
     conversions += co;
     messages += msg;
+    if (row.result_label && co > 0) {
+      labelCount.set(row.result_label, (labelCount.get(row.result_label) ?? 0) + co);
+    }
     const cur = dailyMap.get(row.date) ?? { date: row.date, spend: 0, conversions: 0, clicks: 0, impressions: 0, messages: 0, salesValue: 0 };
     cur.spend += s;
     cur.conversions += co;
@@ -148,8 +158,13 @@ export async function fetchDashboard(
   const roas = spend ? revenue / spend : 0;
   const daily = Array.from(dailyMap.values()).sort((a, b) => a.date.localeCompare(b.date));
 
+  // Pega o rótulo de resultado mais "pesado" no período (mais ocorrências).
+  let resultLabel = META_METRIC_LABELS.results;
+  let best = 0;
+  for (const [k, v] of labelCount) if (v > best) { best = v; resultLabel = k; }
+
   return {
-    summary: { spend, impressions, reach, clicks, conversions, messages, ctr, cpc, cpm, cpl, costPerMessage, frequency, revenue, salesCount, roi, roas, hasData: (insights?.length ?? 0) > 0 || (sales?.length ?? 0) > 0 },
+    summary: { spend, impressions, reach, clicks, conversions, messages, ctr, cpc, cpm, cpl, costPerMessage, frequency, revenue, salesCount, roi, roas, hasData: (insights?.length ?? 0) > 0 || (sales?.length ?? 0) > 0, resultLabel },
     daily,
   };
 }
@@ -167,21 +182,22 @@ export async function fetchAccountPerformance(period: Period, clientId?: string)
   const { data: accounts, error: accountsErr } = await accountsQuery;
   if (accountsErr) throw accountsErr;
 
-  const typedAccounts = ((accounts ?? []) as unknown) as Array<Omit<AccountPerformance, "spend" | "impressions" | "reach" | "clicks" | "conversions" | "ctr" | "cpc" | "cpl">>;
+  const typedAccounts = ((accounts ?? []) as unknown) as Array<Omit<AccountPerformance, "spend" | "impressions" | "reach" | "clicks" | "conversions" | "ctr" | "cpc" | "cpl" | "resultLabel">>;
   const ids = typedAccounts.map((a) => a.id);
   if (ids.length === 0) return [];
 
   const { data: insights, error: insightsErr } = await supabase
     .from("ad_insights")
-    .select("ad_account_id, spend, impressions, reach, clicks, conversions")
+    .select("ad_account_id, spend, impressions, reach, clicks, conversions, result_label")
     .in("ad_account_id", ids)
     .gte("date", since)
     .lte("date", until);
   if (insightsErr) throw insightsErr;
 
   const totals = new Map<string, { spend: number; impressions: number; reach: number; clicks: number; conversions: number }>();
+  const labelByAccount = new Map<string, Map<string, number>>();
   for (const r of insights ?? []) {
-    const row = r as unknown as { ad_account_id: string; spend: number | string; impressions: number | string; reach: number | string; clicks: number | string; conversions: number | string };
+    const row = r as unknown as { ad_account_id: string; spend: number | string; impressions: number | string; reach: number | string; clicks: number | string; conversions: number | string; result_label?: string | null };
     const cur = totals.get(row.ad_account_id) ?? { spend: 0, impressions: 0, reach: 0, clicks: 0, conversions: 0 };
     cur.spend += Number(row.spend);
     cur.impressions += Number(row.impressions);
@@ -189,10 +205,22 @@ export async function fetchAccountPerformance(period: Period, clientId?: string)
     cur.clicks += Number(row.clicks);
     cur.conversions += Number(row.conversions);
     totals.set(row.ad_account_id, cur);
+    const co = Number(row.conversions);
+    if (row.result_label && co > 0) {
+      const m = labelByAccount.get(row.ad_account_id) ?? new Map<string, number>();
+      m.set(row.result_label, (m.get(row.result_label) ?? 0) + co);
+      labelByAccount.set(row.ad_account_id, m);
+    }
   }
 
   return typedAccounts.map((a) => {
     const t = totals.get(a.id) ?? { spend: 0, impressions: 0, reach: 0, clicks: 0, conversions: 0 };
-    return { ...a, ...t, ctr: t.impressions ? (t.clicks / t.impressions) * 100 : 0, cpc: t.clicks ? t.spend / t.clicks : 0, cpl: t.conversions ? t.spend / t.conversions : 0 };
+    let resultLabel = META_METRIC_LABELS.results;
+    const m = labelByAccount.get(a.id);
+    if (m) {
+      let best = 0;
+      for (const [k, v] of m) if (v > best) { best = v; resultLabel = k; }
+    }
+    return { ...a, ...t, ctr: t.impressions ? (t.clicks / t.impressions) * 100 : 0, cpc: t.clicks ? t.spend / t.clicks : 0, cpl: t.conversions ? t.spend / t.conversions : 0, resultLabel };
   });
 }
