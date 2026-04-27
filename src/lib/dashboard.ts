@@ -159,7 +159,7 @@ export async function fetchDashboard(
   const daily = Array.from(dailyMap.values()).sort((a, b) => a.date.localeCompare(b.date));
 
   // Pega o rótulo de resultado mais "pesado" no período (mais ocorrências).
-  let resultLabel = META_METRIC_LABELS.results;
+  let resultLabel: string = META_METRIC_LABELS.results;
   let best = 0;
   for (const [k, v] of labelCount) if (v > best) { best = v; resultLabel = k; }
 
@@ -215,7 +215,7 @@ export async function fetchAccountPerformance(period: Period, clientId?: string)
 
   return typedAccounts.map((a) => {
     const t = totals.get(a.id) ?? { spend: 0, impressions: 0, reach: 0, clicks: 0, conversions: 0 };
-    let resultLabel = META_METRIC_LABELS.results;
+    let resultLabel: string = META_METRIC_LABELS.results;
     const m = labelByAccount.get(a.id);
     if (m) {
       let best = 0;
