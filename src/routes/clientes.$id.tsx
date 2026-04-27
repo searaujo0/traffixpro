@@ -8,6 +8,7 @@ import { fetchClient, fetchSales, type ClientRow, type SaleRow } from "@/lib/dat
 import { fetchAccountPerformance, fetchDashboard, type AccountPerformance, type DailyPoint, type DashboardSummary } from "@/lib/dashboard";
 import { brl, brlPrecise, dateBR, num, pct } from "@/lib/format";
 import { generateClientReportPDF } from "@/lib/clientReportPdf";
+import { META_METRIC_LABELS } from "@/lib/metaLabels";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/clientes/$id")({
@@ -126,14 +127,14 @@ function ClientReport({ client, summary, daily, accounts, sales }: { client: Cli
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard label="Faturamento" value={brl(summary.revenue)} icon={Wallet} accent="primary" />
         <KpiCard label="ROI" value={pct(summary.roi)} icon={TrendingUp} accent="success" />
-        <KpiCard label="Investimento" value={brl(summary.spend)} icon={Target} />
+        <KpiCard label={META_METRIC_LABELS.spend} value={brl(summary.spend)} icon={Target} />
         <KpiCard label="Vendas" value={num(summary.salesCount)} icon={ShoppingBag} accent="warning" />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard label="Leads" value={num(summary.conversions)} icon={MessageCircle} />
-        <KpiCard label="Custo por lead" value={summary.cpl ? brlPrecise(summary.cpl) : "—"} icon={Target} />
-        <KpiCard label="Cliques" value={num(summary.clicks)} icon={MousePointerClick} />
+        <KpiCard label={summary.resultLabel || META_METRIC_LABELS.results} value={num(summary.conversions)} icon={MessageCircle} />
+        <KpiCard label={META_METRIC_LABELS.costPerResult} value={summary.cpl ? brlPrecise(summary.cpl) : "—"} icon={Target} />
+        <KpiCard label={META_METRIC_LABELS.linkClicks} value={num(summary.clicks)} icon={MousePointerClick} />
         <KpiCard label="Impressões" value={num(summary.impressions)} icon={Eye} />
         <KpiCard label="ROAS" value={`${summary.roas.toFixed(2).replace(".", ",")}x`} icon={TrendingUp} />
         <KpiCard label="Alcance" value={num(summary.reach)} icon={Users} />
@@ -171,7 +172,7 @@ function ClientReport({ client, summary, daily, accounts, sales }: { client: Cli
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-[11px] uppercase tracking-wider text-muted-foreground border-b border-border">
-                  <th className="py-2 pr-3">Conta</th><th className="py-2 pr-3">Investido</th><th className="py-2 pr-3">Leads</th><th className="py-2 pr-3">Cliques</th><th className="py-2 pr-3">Sync</th>
+                  <th className="py-2 pr-3">Conta</th><th className="py-2 pr-3">{META_METRIC_LABELS.spend}</th><th className="py-2 pr-3">{META_METRIC_LABELS.results}</th><th className="py-2 pr-3">{META_METRIC_LABELS.linkClicks}</th><th className="py-2 pr-3">Sync</th>
                 </tr>
               </thead>
               <tbody>
@@ -179,7 +180,7 @@ function ClientReport({ client, summary, daily, accounts, sales }: { client: Cli
                   <tr key={a.id} className="border-b border-border/50">
                     <td className="py-2.5 pr-3"><span className="font-medium">{a.name}</span><br /><span className="text-xs text-muted-foreground">{a.id}</span></td>
                     <td className="py-2.5 pr-3">{brl(a.spend)}</td>
-                    <td className="py-2.5 pr-3">{num(a.conversions)}</td>
+                    <td className="py-2.5 pr-3">{num(a.conversions)}<br /><span className="text-[10px] text-muted-foreground">{a.resultLabel}</span></td>
                     <td className="py-2.5 pr-3">{num(a.clicks)}</td>
                     <td className="py-2.5 pr-3 text-xs text-muted-foreground">{a.last_sync_at ? new Date(a.last_sync_at).toLocaleString("pt-BR") : "nunca"}</td>
                   </tr>
