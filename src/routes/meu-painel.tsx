@@ -16,6 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { fetchDashboard, type DailyPoint, type DashboardSummary } from "@/lib/dashboard";
+import { META_METRIC_LABELS } from "@/lib/metaLabels";
 import { generateClientReportPDF } from "@/lib/clientReportPdf";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { cn } from "@/lib/utils";
@@ -38,8 +39,8 @@ type QuickRange = "today" | "7d" | "30d" | "thisMonth" | "lastMonth" | "custom";
 const OPTIONAL_METRICS = [
   { key: "impressions", label: "Impressões" },
   { key: "reach", label: "Alcance" },
-  { key: "conversions", label: "Conversões totais (leads)" },
-  { key: "cpl", label: "CPL (custo por lead)" },
+  { key: "conversions", label: "Resultados (total)" },
+  { key: "cpl", label: "Custo por resultado" },
   { key: "frequency", label: "Frequência" },
   { key: "roas", label: "ROAS" },
 ] as const;
@@ -363,13 +364,13 @@ function ClientPanel() {
         <div ref={reportRef} className="space-y-6">
           {/* Main KPIs */}
           <section className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-3">
-            <Kpi icon={Wallet} label="Valor investido" value={brl(m?.spend ?? 0)} />
+            <Kpi icon={Wallet} label={META_METRIC_LABELS.spend} value={brl(m?.spend ?? 0)} />
             <Kpi icon={Eye} label="CPM" value={m?.cpm ? brlPrecise(m.cpm) : "—"} />
-            <Kpi icon={MousePointerClick} label="Cliques" value={num(m?.clicks ?? 0)} />
+            <Kpi icon={MousePointerClick} label={META_METRIC_LABELS.linkClicks} value={num(m?.clicks ?? 0)} />
             <Kpi icon={MousePointerClick} label="CPC" value={m?.cpc ? brlPrecise(m.cpc) : "—"} />
             <Kpi icon={Percent} label="CTR" value={pct(m?.ctr ?? 0)} />
-            <Kpi icon={MessageCircle} label="Mensagens (WhatsApp)" value={num(m?.messages ?? 0)} />
-            <Kpi icon={MessageCircle} label="Custo por mensagem" value={m?.costPerMessage ? brlPrecise(m.costPerMessage) : "—"} />
+            <Kpi icon={MessageCircle} label={META_METRIC_LABELS.messages} value={num(m?.messages ?? 0)} />
+            <Kpi icon={MessageCircle} label={META_METRIC_LABELS.costPerMessage} value={m?.costPerMessage ? brlPrecise(m.costPerMessage) : "—"} />
             <Kpi icon={ShoppingBag} label="Vendas (R$)" value={brl(m?.revenue ?? 0)} hint={`${m?.salesCount ?? 0} unidade(s)`} />
             <Kpi icon={TrendingUp} label="ROI" value={pct(m?.roi ?? 0)} highlight tone={(m?.roi ?? 0) >= 0 ? "success" : "destructive"} />
           </section>
@@ -379,8 +380,8 @@ function ClientPanel() {
             <section className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
               {optional.impressions && <Kpi small icon={Eye} label="Impressões" value={num(m?.impressions ?? 0)} />}
               {optional.reach && <Kpi small icon={Users} label="Alcance" value={num(m?.reach ?? 0)} />}
-              {optional.conversions && <Kpi small icon={Target} label="Leads" value={num(m?.conversions ?? 0)} />}
-              {optional.cpl && <Kpi small icon={Target} label="CPL" value={m?.cpl ? brlPrecise(m.cpl) : "—"} />}
+              {optional.conversions && <Kpi small icon={Target} label={m?.resultLabel ?? META_METRIC_LABELS.results} value={num(m?.conversions ?? 0)} />}
+              {optional.cpl && <Kpi small icon={Target} label={META_METRIC_LABELS.costPerResult} value={m?.cpl ? brlPrecise(m.cpl) : "—"} />}
               {optional.frequency && <Kpi small icon={Activity} label="Frequência" value={(m?.frequency ?? 0).toFixed(2).replace(".", ",")} />}
               {optional.roas && <Kpi small icon={TrendingUp} label="ROAS" value={`${(m?.roas ?? 0).toFixed(2).replace(".", ",")}x`} />}
             </section>

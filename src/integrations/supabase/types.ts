@@ -87,6 +87,8 @@ export type Database = {
           messages: number
           raw: Json | null
           reach: number
+          result_label: string | null
+          result_type: string | null
           spend: number
         }
         Insert: {
@@ -101,6 +103,8 @@ export type Database = {
           messages?: number
           raw?: Json | null
           reach?: number
+          result_label?: string | null
+          result_type?: string | null
           spend?: number
         }
         Update: {
@@ -115,6 +119,8 @@ export type Database = {
           messages?: number
           raw?: Json | null
           reach?: number
+          result_label?: string | null
+          result_type?: string | null
           spend?: number
         }
         Relationships: [

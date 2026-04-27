@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import { labelForActionType, RESULT_PRIORITY, MESSAGE_ACTION_TYPES } from "@/lib/metaLabels";
 
 const GRAPH = "https://graph.facebook.com/v21.0";
 
@@ -237,42 +238,29 @@ export const syncInsights = createServerFn({ method: "POST" })
     }
 
     const rows = (json.data || []).map((d: any) => {
-      // Conta apenas UM action_type por linha, na prioridade abaixo,
-      // para não inflar o número (Meta retorna o mesmo lead em vários tipos).
       const actions: Array<{ action_type: string; value: string | number }> = d.actions || [];
       const byType = new Map<string, number>();
       for (const a of actions) byType.set(a.action_type, Number(a.value || 0));
-      const priority = [
-        "offsite_conversion.fb_pixel_lead",
-        "lead",
-        "onsite_conversion.lead_grouped",
-        "complete_registration",
-        "offsite_conversion.fb_pixel_complete_registration",
-        "purchase",
-        "offsite_conversion.fb_pixel_purchase",
-      ];
+      // Escolhe UM action_type como "Resultado" principal (ordem alinhada ao
+      // Ads Manager: vendas > leads > cadastros > mensagens > engajamento).
       let conversions = 0;
-      let conversionSource: string | null = null;
-      for (const key of priority) {
+      let resultType: string | null = null;
+      for (const key of RESULT_PRIORITY) {
         if (byType.has(key)) {
           conversions = byType.get(key) || 0;
-          conversionSource = key;
+          resultType = key;
           break;
         }
       }
-      // Mensagens (WhatsApp / Messenger / Instagram Direct)
-      const messagePriority = [
-        "onsite_conversion.total_messaging_connection",
-        "onsite_conversion.messaging_conversation_started_7d",
-        "onsite_conversion.messaging_first_reply",
-      ];
+      // Mensagens (WhatsApp / Messenger / Instagram Direct) — coluna separada
       let messages = 0;
-      for (const key of messagePriority) {
+      for (const key of MESSAGE_ACTION_TYPES) {
         if (byType.has(key)) {
           messages = byType.get(key) || 0;
           break;
         }
       }
+      const resultLabel = labelForActionType(resultType);
       const breakdown = Object.fromEntries(byType);
       // Cliques no link (o que o Facebook Ads Manager mostra por padrão)
       const linkClicks = Number(d.inline_link_clicks ?? 0);
@@ -292,10 +280,12 @@ export const syncInsights = createServerFn({ method: "POST" })
         ctr: ctrLink || Number(d.ctr || 0),
         conversions,
         messages,
+        result_type: resultType,
+        result_label: resultLabel,
         raw: {
           ...d,
           conversions_breakdown: breakdown,
-          conversion_source: conversionSource,
+          conversion_source: resultType,
           all_clicks: totalClicks,
           link_clicks: linkClicks,
         },
