@@ -4,6 +4,7 @@ import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { brl, brlPrecise, num, pct } from "@/lib/format";
 import { fetchAccountPerformance, type AccountPerformance, type Period } from "@/lib/dashboard";
+import { META_METRIC_LABELS } from "@/lib/metaLabels";
 
 export const Route = createFileRoute("/campanhas")({
   head: () => ({
@@ -77,15 +78,16 @@ Nenhuma conta importada. Vá em Meta Ads para conectar o Facebook e importar con
                 </div>
                 <div className="flex items-center gap-6 text-sm">
                   <div>
-                    <p className="text-[10px] uppercase text-muted-foreground">Investimento</p>
+                    <p className="text-[10px] uppercase text-muted-foreground">{META_METRIC_LABELS.spend}</p>
                     <p className="font-semibold">{brl(r.spend)}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase text-muted-foreground">Leads</p>
+                    <p className="text-[10px] uppercase text-muted-foreground">{META_METRIC_LABELS.results}</p>
                     <p className="font-semibold">{num(r.conversions)}</p>
+                    <p className="text-[9px] text-muted-foreground/70 mt-0.5">{r.resultLabel}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase text-muted-foreground">CPL</p>
+                    <p className="text-[10px] uppercase text-muted-foreground">{META_METRIC_LABELS.costPerResult}</p>
                     <p className="font-semibold">{r.cpl ? brlPrecise(r.cpl) : "—"}</p>
                   </div>
                   <div>
@@ -93,7 +95,7 @@ Nenhuma conta importada. Vá em Meta Ads para conectar o Facebook e importar con
                     <p className="font-semibold">{pct(r.ctr)}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase text-muted-foreground">Cliques</p>
+                    <p className="text-[10px] uppercase text-muted-foreground">{META_METRIC_LABELS.linkClicks}</p>
                     <p className="font-semibold">{num(r.clicks)}</p>
                   </div>
                 </div>
