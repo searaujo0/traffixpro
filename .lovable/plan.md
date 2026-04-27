@@ -1,109 +1,73 @@
+## Problema
 
+As métricas exibidas no app (página `/campanhas`, painel do cliente, dashboard) usam **nomes diferentes** dos que aparecem no Facebook Ads Manager, e em alguns casos **calculam coisas diferentes** com o mesmo nome. Exemplos do que está errado hoje:
 
-## Painel do Cliente — Métricas, Relatórios e Período Personalizado
+| Hoje no app | No Facebook Ads Manager |
+|---|---|
+| "Leads" | **Resultados** (depende do objetivo da campanha — pode ser Leads, Conversas, Compras, Cadastros…) |
+| "CPL" | **Custo por resultado** |
+| "Cliques" | **Cliques no link** (já está certo no número, mas o rótulo não diz isso) |
+| "CTR" | **CTR (taxa de cliques no link)** |
+| "Conversas" | **Conversas iniciadas por mensagens** |
+| "Custo por conversa" | **Custo por conversa iniciada por mensagens** |
 
-Reformular `/meu-painel` para ser uma central completa de acompanhamento do cliente, com métricas diárias, período flexível, escolha de métricas visíveis, registro de vendas e ROI calculado.
+Além disso, hoje a gente força "lead" como o tipo de conversão, mas se a campanha é de Compra ou de Mensagens o número fica zerado ou errado.
 
-### 1. Período flexível
+## O que vai mudar
 
-Hoje só existem botões "hoje / 7d / 30d". Vou substituir por um seletor mais completo:
+### 1. Capturar o "tipo de resultado" real de cada conta/campanha
 
-- Botões rápidos: **Hoje**, **7 dias**, **30 dias**, **Este mês**, **Mês passado**
-- Opção **Personalizado** com dois campos de data (date pickers `react-day-picker` já presentes no projeto)
-- A data selecionada vira a base de TODAS as métricas, gráficos e ROI da tela
+No `syncInsights` (server), além de já priorizar leads, vou:
+- Manter o mapa completo de `actions` (já fazemos)
+- **Detectar e salvar qual foi o "action_type" escolhido** como resultado principal (já temos `conversion_source` no raw — vou promover isso pra um campo só)
+- Salvar também o **rótulo legível em PT-BR** desse action_type (ex.: `offsite_conversion.fb_pixel_lead` → "Leads", `onsite_conversion.messaging_conversation_started_7d` → "Conversas iniciadas")
 
-Tecnicamente: `fetchDashboard` em `src/lib/dashboard.ts` ganha versão que aceita `since`/`until` diretos, em vez de apenas `Period`.
+Para isso, uma mudança simples no banco: adicionar duas colunas em `ad_insights`:
+- `result_type text` — o action_type bruto do Facebook
+- `result_label text` — o nome amigável em português (igual ao Ads Manager)
 
-### 2. Métricas principais sempre visíveis
+### 2. Renomear as métricas em todo o app para bater com o Ads Manager
 
-Cards fixos no topo, na ordem pedida:
+Criar um arquivo central `src/lib/metaLabels.ts` com:
+- O **dicionário oficial** de action_type → label PT-BR (mesmos nomes do Ads Manager)
+- Constantes com os rótulos das métricas padrão: `"Valor usado"` (não "Investimento"), `"Impressões"`, `"Alcance"`, `"Cliques no link"`, `"CTR (cliques no link)"`, `"CPC (custo por clique no link)"`, `"CPM"`, `"Frequência"`, `"Resultados"`, `"Custo por resultado"`, etc.
 
-1. Valor investido
-2. CPM
-3. Cliques
-4. CPC (custo por clique)
-5. CTR
-6. Mensagens no WhatsApp
-7. Custo por mensagem
-8. Vendas (somatório do valor)
-9. ROI = (Vendas − Investido) / Investido × 100
+Depois, substituir os textos em:
+- `src/routes/campanhas.tsx` ("Investimento" → "Valor usado", "Leads" → "Resultados", "CPL" → "Custo por resultado", "Cliques" → "Cliques no link")
+- `src/routes/meu-painel.tsx` (mesma coisa)
+- `src/routes/clientes.$id.tsx` e o PDF gerado em `src/lib/clientReportPdf.ts`
+- `src/routes/insights.tsx` e `src/routes/relatorios.tsx`
+- Tipos em `src/lib/dashboard.ts` ganham `resultLabel` para a UI saber o que mostrar
 
-Para "Mensagens no WhatsApp" e "Custo por mensagem" vou ampliar o parser do Meta em `src/server/meta-integration.ts` para extrair também:
+### 3. Corrigir o cálculo do "Resultado" para respeitar o objetivo
 
-- `onsite_conversion.messaging_conversation_started_7d`
-- `onsite_conversion.total_messaging_connection`
+Hoje a prioridade é fixa: lead → registration → purchase. Vou trocar por uma lógica que:
+- Olha o **objetivo** da conta/campanha quando disponível
+- Se o objetivo é Mensagens → resultado = conversas iniciadas
+- Se é Conversões com pixel de Lead → resultado = leads
+- Se é Vendas → resultado = compras
+- Fallback: pega o action_type mais relevante encontrado no período
 
-E salvar essas contagens em uma nova coluna `messages` na tabela `ad_insights` (migration nova). Sem essa coluna não dá pra ter custo por mensagem real.
+Isso resolve o caso "M1D" onde os números vinham errados — provavelmente a campanha é de mensagens mas estava sendo lida como leads (ou vice-versa).
 
-### 3. Métricas extras opcionais
+### 4. Mostrar o tipo de resultado na UI
 
-Botão **Personalizar métricas** abre um popover com checkboxes:
+Em cada card/linha que mostra "Resultados: 123", colocar abaixo em cinza o que é (ex.: "Conversas iniciadas por mensagens" ou "Leads do pixel"), igual o Ads Manager faz no cabeçalho da coluna.
 
-- Impressões
-- Alcance
-- Conversões totais
-- CPL (custo por lead)
-- Frequência (impressões / alcance)
-- ROAS
+## Arquivos afetados
 
-Seleção salva em `localStorage` por usuário, então da próxima vez já volta como ele deixou.
+- **Migração**: adicionar `result_type`, `result_label` em `ad_insights`
+- **Novo**: `src/lib/metaLabels.ts` — dicionário central de rótulos PT-BR
+- **Editar**: `src/server/meta-integration.ts` (`syncInsights` salva os novos campos com lógica nova)
+- **Editar**: `src/lib/dashboard.ts` (expor `resultLabel` agregado por conta/cliente)
+- **Editar**: `src/routes/campanhas.tsx`, `src/routes/meu-painel.tsx`, `src/routes/clientes.$id.tsx`, `src/routes/insights.tsx`, `src/routes/relatorios.tsx`, `src/lib/clientReportPdf.ts` — trocar os textos das métricas
 
-### 4. Métricas e gráfico diário
+## O que **não** vou fazer (a menos que você peça)
 
-Abaixo dos cards:
+- Não vou puxar dados a nível de campanha individual (continua agregado por conta) — se quiser ver campanha por campanha eu faço numa próxima rodada
+- Não vou mudar a moeda nem formato numérico (continua BRL)
+- Não vou re-sincronizar automaticamente o histórico — depois de aplicar, você clica em "Sincronizar" nas contas pra repopular com a lógica nova
 
-- Gráfico de área diário (já existe) — adicionar toggle de métrica: investimento, cliques, mensagens, vendas
-- **Tabela diária** com uma linha por dia do período, colunas: data, investimento, cliques, CTR, mensagens, custo por mensagem, vendas do dia, ROI do dia
-- Botão **Exportar PDF** (usa `exportElementToPDF` que já existe em `src/lib/pdf.ts`) e **Exportar CSV**
+## Pergunta antes de seguir
 
-### 5. Registro de vendas pelo próprio cliente
-
-Já existe form básico. Vou melhorar:
-
-- Campos: **Data da venda** (date picker), **Valor da venda** (R$), **Quantidade** (default 1), **Observação** opcional
-- Lista das últimas 10 vendas com botão excluir
-- Vendas entram automaticamente no cálculo de ROI do período selecionado
-
-RLS já permite cliente inserir/ver/excluir as próprias vendas (policy "Clients insert own sales" e "Clients view own sales"). Vou adicionar policy de DELETE para o cliente.
-
-### 6. ROI no período
-
-Cálculo direto:
-
-```
-ROI = ((soma de vendas no período) − (soma de gasto no período)) / gasto × 100
-```
-
-Mostrado como card destacado e também por dia na tabela.
-
-### 7. Mudanças técnicas resumidas
-
-**Migration nova:**
-- adicionar coluna `messages bigint default 0` em `ad_insights`
-- policy DELETE em `sales` para o próprio cliente
-
-**`src/server/meta-integration.ts`:**
-- extrair contagem de mensagens do WhatsApp/Messenger e gravar em `messages`
-
-**`src/lib/dashboard.ts`:**
-- aceitar `{ since, until }` arbitrário
-- retornar `messages` e `costPerMessage` no summary
-- retornar `daily` com `messages` e `salesValue` por dia
-
-**`src/routes/meu-painel.tsx`:**
-- novo seletor de período (rápido + personalizado)
-- 9 cards principais
-- popover "Personalizar métricas" com persistência em `localStorage`
-- gráfico com toggle de métrica
-- tabela diária
-- exportar PDF/CSV
-- form de venda melhorado + lista de vendas com excluir
-
-**Sem mudança visual no admin** — só o painel do cliente é afetado.
-
-### 8. O que você precisa fazer depois
-
-1. Ir em **Integrações → Meta** e clicar em **Sincronizar** novamente para popular a coluna `messages` com os dados de WhatsApp.
-2. Entrar como cliente em `/meu-painel` para ver as novas métricas.
-3. Registrar vendas pela própria tela do cliente para ver o ROI fechar.
-
+Confirma uma coisa: você quer os rótulos em **português igual o Ads Manager BR** (ex.: "Valor usado", "Resultados", "Custo por resultado", "Cliques no link"), certo? Se preferir os termos em inglês (igual o Ads Manager em inglês: "Amount spent", "Results", "Cost per result", "Link clicks"), me avisa que eu ajusto.
