@@ -10,7 +10,7 @@ import { fetchAccountPerformance, fetchDashboard } from "@/lib/dashboard";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { createClientUser } from "@/server/admin-users";
-import { updateClient, deleteClient } from "@/server/clients-manage";
+import { updateClient, deleteClient, createClientFull } from "@/server/clients-manage";
 import {
   Dialog,
   DialogContent,
@@ -47,7 +47,10 @@ function ClientesPage() {
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
   const [segment, setSegment] = useState("");
-  const [ownerEmail, setOwnerEmail] = useState("");
+  const [contractValue, setContractValue] = useState("");
+  const [teamCost, setTeamCost] = useState("");
+  const [commissionPct, setCommissionPct] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
   const [accessClient, setAccessClient] = useState<Row | null>(null);
   const [accessEmail, setAccessEmail] = useState("");
   const [accessFullName, setAccessFullName] = useState("");
@@ -56,6 +59,7 @@ function ClientesPage() {
   const createUserFn = useServerFn(createClientUser);
   const updateClientFn = useServerFn(updateClient);
   const deleteClientFn = useServerFn(deleteClient);
+  const createClientFn = useServerFn(createClientFull);
   const navigate = useNavigate();
 
   // Edit state
@@ -63,6 +67,10 @@ function ClientesPage() {
   const [editName, setEditName] = useState("");
   const [editSegment, setEditSegment] = useState("");
   const [editStatus, setEditStatus] = useState<"ativo" | "inativo">("ativo");
+  const [editContractValue, setEditContractValue] = useState("");
+  const [editTeamCost, setEditTeamCost] = useState("");
+  const [editCommissionPct, setEditCommissionPct] = useState("");
+  const [editContactEmail, setEditContactEmail] = useState("");
   const [editSubmitting, setEditSubmitting] = useState(false);
 
   // Delete state
@@ -74,6 +82,12 @@ function ClientesPage() {
     setEditName(c.name);
     setEditSegment(c.segment ?? "");
     setEditStatus((c.status as "ativo" | "inativo") ?? "ativo");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const cAny = c as any;
+    setEditContractValue(String(cAny.contract_value ?? ""));
+    setEditTeamCost(String(cAny.marketing_team_cost ?? ""));
+    setEditCommissionPct(String(cAny.commission_pct ?? ""));
+    setEditContactEmail(cAny.contact_email ?? "");
   }
 
   async function handleEditSubmit(e: React.FormEvent) {
@@ -87,6 +101,10 @@ function ClientesPage() {
           name: editName,
           segment: editSegment.trim() || null,
           status: editStatus,
+          contract_value: parseFloat(editContractValue.replace(",", ".")) || 0,
+          marketing_team_cost: parseFloat(editTeamCost.replace(",", ".")) || 0,
+          commission_pct: parseFloat(editCommissionPct.replace(",", ".")) || 0,
+          contact_email: editContactEmail.trim() || null,
         },
       });
       if (res.error) toast.error(res.error);
@@ -186,25 +204,29 @@ function ClientesPage() {
 
   async function createClient(e: React.FormEvent) {
     e.preventDefault();
-    let owner_user_id: string | null = null;
-    if (ownerEmail) {
-      // tenta achar user pelo email via user_roles? Não temos profiles. Deixar null por enquanto.
-      // Admin atribuirá depois via SQL ou interface dedicada.
-    }
-    const { error } = await supabase.from("clients").insert({
-      name,
-      segment: segment || null,
-      owner_user_id,
-    });
-    if (error) {
-      toast.error(error.message);
-    } else {
+    try {
+      const res = await createClientFn({
+        data: {
+          name,
+          segment: segment.trim() || null,
+          contact_email: contactEmail.trim() || null,
+          contract_value: parseFloat(contractValue.replace(",", ".")) || 0,
+          marketing_team_cost: parseFloat(teamCost.replace(",", ".")) || 0,
+          commission_pct: parseFloat(commissionPct.replace(",", ".")) || 0,
+        },
+      });
+      if (res.error) { toast.error(res.error); return; }
       toast.success("Cliente criado");
       setName("");
       setSegment("");
-      setOwnerEmail("");
+      setContractValue("");
+      setTeamCost("");
+      setCommissionPct("");
+      setContactEmail("");
       setShowForm(false);
       void load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao criar cliente");
     }
   }
 
@@ -230,7 +252,7 @@ function ClientesPage() {
         {showForm && (
           <form
             onSubmit={createClient}
-            className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-card)] grid gap-3 sm:grid-cols-[1fr_1fr_auto]"
+            className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-card)] grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
           >
             <div>
               <label className="text-xs font-medium text-muted-foreground">Nome</label>
@@ -240,9 +262,25 @@ function ClientesPage() {
               <label className="text-xs font-medium text-muted-foreground">Segmento</label>
               <Input value={segment} onChange={(e) => setSegment(e.target.value)} className="mt-1" />
             </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Email de contato</label>
+              <Input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} className="mt-1" />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Valor do contrato (R$)</label>
+              <Input value={contractValue} onChange={(e) => setContractValue(e.target.value)} placeholder="2500,00" className="mt-1" />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Custo equipe marketing (R$)</label>
+              <Input value={teamCost} onChange={(e) => setTeamCost(e.target.value)} placeholder="800,00" className="mt-1" />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">% Comissão sobre lucro</label>
+              <Input value={commissionPct} onChange={(e) => setCommissionPct(e.target.value)} placeholder="20" className="mt-1" />
+            </div>
             <button
               type="submit"
-              className="self-end inline-flex items-center justify-center gap-2 px-4 h-10 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition"
+              className="self-end inline-flex items-center justify-center gap-2 px-4 h-10 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition lg:col-start-3"
             >
               Salvar
             </button>
@@ -432,6 +470,24 @@ function ClientesPage() {
                   <option value="ativo">Ativo</option>
                   <option value="inativo">Inativo</option>
                 </select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Email contato</label>
+                  <Input type="email" value={editContactEmail} onChange={(e) => setEditContactEmail(e.target.value)} className="mt-1" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Contrato (R$)</label>
+                  <Input value={editContractValue} onChange={(e) => setEditContractValue(e.target.value)} className="mt-1" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Custo equipe (R$)</label>
+                  <Input value={editTeamCost} onChange={(e) => setEditTeamCost(e.target.value)} className="mt-1" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">% Comissão</label>
+                  <Input value={editCommissionPct} onChange={(e) => setEditCommissionPct(e.target.value)} className="mt-1" />
+                </div>
               </div>
               <button
                 type="submit"
