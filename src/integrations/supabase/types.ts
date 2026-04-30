@@ -183,27 +183,92 @@ export type Database = {
           },
         ]
       }
+      client_payments: {
+        Row: {
+          amount: number
+          client_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          payment_date: string
+          reference_month: number
+          reference_year: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          payment_date?: string
+          reference_month: number
+          reference_year: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          payment_date?: string
+          reference_month?: number
+          reference_year?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_payments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
+          commission_pct: number
+          contact_email: string | null
+          contract_value: number
           created_at: string
           id: string
+          marketing_team_cost: number
           name: string
+          notes: string | null
           owner_user_id: string | null
           segment: string | null
           status: string
         }
         Insert: {
+          commission_pct?: number
+          contact_email?: string | null
+          contract_value?: number
           created_at?: string
           id?: string
+          marketing_team_cost?: number
           name: string
+          notes?: string | null
           owner_user_id?: string | null
           segment?: string | null
           status?: string
         }
         Update: {
+          commission_pct?: number
+          contact_email?: string | null
+          contract_value?: number
           created_at?: string
           id?: string
+          marketing_team_cost?: number
           name?: string
+          notes?: string | null
           owner_user_id?: string | null
           segment?: string | null
           status?: string
