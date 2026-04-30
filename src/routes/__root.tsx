@@ -1,5 +1,6 @@
 import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import { Toaster } from "@/components/ui/sonner";
 
 import appCss from "../styles.css?url";
@@ -31,18 +32,15 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Web app for managing and visualizing paid traffic reports for local businesses and WhatsApp campaigns." },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Web app for managing and visualizing paid traffic reports for local businesses and WhatsApp campaigns." },
+      { title: "M1 Digital" },
+      { name: "description", content: "M1 Digital — Plataforma de gestão de tráfego pago, relatórios e performance de campanhas." },
+      { name: "author", content: "M1 Digital" },
+      { property: "og:title", content: "M1 Digital" },
+      { property: "og:description", content: "Plataforma de gestão de tráfego pago, relatórios e performance de campanhas." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
-      { name: "twitter:title", content: "Lovable App" },
-      { name: "twitter:description", content: "Web app for managing and visualizing paid traffic reports for local businesses and WhatsApp campaigns." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/ef066770-fcb2-4344-bb62-2850807a3276/id-preview-735ae71a--f1cf2d28-4d77-42ef-ab84-d931ce6691a0.lovable.app-1776786100025.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/ef066770-fcb2-4344-bb62-2850807a3276/id-preview-735ae71a--f1cf2d28-4d77-42ef-ab84-d931ce6691a0.lovable.app-1776786100025.png" },
+      { name: "twitter:title", content: "M1 Digital" },
+      { name: "twitter:description", content: "Plataforma de gestão de tráfego pago, relatórios e performance de campanhas." },
     ],
     links: [
       {
@@ -72,9 +70,11 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   return (
-    <AuthProvider>
-      <Outlet />
-      <Toaster />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <Outlet />
+        <Toaster />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
