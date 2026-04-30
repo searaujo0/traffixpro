@@ -7,16 +7,20 @@ import {
   Megaphone,
   Wallet,
   Sparkles,
-  Activity,
   UserCog,
   Plug,
   Bell,
   Search,
   LogOut,
+  Sun,
+  Moon,
+  Receipt,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useAuth, type AppRole } from "@/contexts/AuthContext";
+import { useTheme } from "@/contexts/ThemeContext";
 import { RoleGuard } from "@/components/RoleGuard";
+import logoM1 from "@/assets/m1-logo.png";
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -24,6 +28,7 @@ const navItems = [
   { to: "/clientes", label: "Clientes", icon: Users },
   { to: "/campanhas", label: "Campanhas", icon: Megaphone },
   { to: "/financeiro", label: "Financeiro", icon: Wallet },
+  { to: "/comissoes", label: "Comissões", icon: Receipt },
   { to: "/insights", label: "Insights", icon: Sparkles },
   { to: "/integracoes/meta", label: "Meta Ads", icon: Plug },
   { to: "/admin/usuarios", label: "Usuários", icon: UserCog },
@@ -32,6 +37,7 @@ const navItems = [
 export function AppLayout({ children }: { children: ReactNode }) {
   const { location } = useRouterState();
   const { user, profile, signOut } = useAuth();
+  const { theme, toggle } = useTheme();
   const navigate = useNavigate();
 
   async function handleLogout() {
@@ -55,11 +61,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
       {/* Sidebar */}
       <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-border bg-sidebar">
         <div className="flex items-center gap-2 px-6 py-5 border-b border-sidebar-border">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[image:var(--gradient-primary)] shadow-[var(--shadow-glow)]">
-            <Activity className="h-5 w-5 text-primary-foreground" strokeWidth={2.5} />
-          </div>
+          <img src={logoM1} alt="M1 Digital" className="h-9 w-9 object-contain" />
           <div>
-            <p className="text-sm font-semibold leading-tight">TraffixPro</p>
+            <p className="text-sm font-semibold leading-tight">M1 Digital</p>
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
               Painel do Gestor
             </p>
@@ -106,10 +110,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
         {/* Topbar */}
         <header className="sticky top-0 z-30 flex items-center gap-3 px-4 md:px-8 h-16 border-b border-border bg-background/70 backdrop-blur-xl">
           <div className="flex md:hidden items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[image:var(--gradient-primary)]">
-              <Activity className="h-4 w-4 text-primary-foreground" strokeWidth={2.5} />
-            </div>
-            <p className="text-sm font-semibold">TraffixPro</p>
+            <img src={logoM1} alt="M1 Digital" className="h-8 w-8 object-contain" />
+            <p className="text-sm font-semibold">M1 Digital</p>
           </div>
 
           <div className="hidden md:flex flex-1 max-w-md relative">
@@ -121,6 +123,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </div>
 
           <div className="ml-auto flex items-center gap-2">
+            <button
+              onClick={toggle}
+              title={theme === "dark" ? "Modo claro" : "Modo noturno"}
+              className="h-10 w-10 rounded-lg border border-border bg-secondary/40 flex items-center justify-center hover:bg-secondary transition-[var(--transition-smooth)]"
+            >
+              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </button>
             <button className="relative h-10 w-10 rounded-lg border border-border bg-secondary/40 flex items-center justify-center hover:bg-secondary transition-[var(--transition-smooth)]">
               <Bell className="h-4 w-4" />
               <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-accent shadow-[0_0_8px_var(--accent)]" />
