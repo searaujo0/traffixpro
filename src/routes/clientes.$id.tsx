@@ -14,7 +14,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/clientes/$id")({
   head: () => ({
     meta: [
-      { title: "Detalhe do cliente — TraffixPro" },
+      { title: "Detalhe do cliente — M1 Digital" },
       { name: "description", content: "Relatório completo do cliente com dados reais do Meta Ads." },
     ],
   }),

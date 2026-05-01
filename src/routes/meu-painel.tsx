@@ -2,9 +2,9 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
 import {
-  Activity, LogOut, Loader2, Plus, RefreshCw, Settings2, Download, FileText,
+  LogOut, Loader2, Plus, RefreshCw, Settings2, Download, FileText,
   CalendarIcon, Trash2, Wallet, MousePointerClick, MessageCircle, ShoppingBag,
-  TrendingUp, Eye, Target, Percent, Users,
+  TrendingUp, Eye, Target, Percent, Users, Activity,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,11 +20,12 @@ import { META_METRIC_LABELS } from "@/lib/metaLabels";
 import { generateClientReportPDF } from "@/lib/clientReportPdf";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { cn } from "@/lib/utils";
+import logoM1 from "@/assets/m1-logo.png";
 
 export const Route = createFileRoute("/meu-painel")({
   head: () => ({
     meta: [
-      { title: "Meu Painel — TraffixPro" },
+      { title: "Meu Painel — M1 Digital" },
       { name: "description", content: "Acompanhe suas campanhas, leads e o retorno do investimento." },
     ],
   }),
@@ -278,9 +279,7 @@ function ClientPanel() {
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 flex items-center gap-3 px-4 md:px-8 h-16 border-b border-border bg-background/70 backdrop-blur-xl">
         <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[image:var(--gradient-primary)] shadow-[var(--shadow-glow)]">
-            <Activity className="h-5 w-5 text-primary-foreground" strokeWidth={2.5} />
-          </div>
+          <img src={logoM1} alt="M1 Digital" className="h-9 w-9 object-contain" />
           <div>
             <p className="text-sm font-semibold leading-tight">{client.name}</p>
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Seu painel</p>

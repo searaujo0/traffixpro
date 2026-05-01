@@ -24,7 +24,7 @@ export async function exportElementToPDF(element: HTMLElement, filename: string,
   pdf.setTextColor(255, 255, 255);
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(14);
-  pdf.text("TraffixPro", 12, 10);
+  pdf.text("M1 Digital", 12, 10);
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(9);
   pdf.text(title, 12, 16);

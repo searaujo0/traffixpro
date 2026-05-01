@@ -62,7 +62,7 @@ export async function generateClientReportPDF(data: ReportData) {
     setText(MUTED);
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(8);
-    pdf.text("TraffixPro • Relatório gerado em " + new Date().toLocaleString("pt-BR"), margin, pageH - 8);
+    pdf.text("M1 Digital • Relatório gerado em " + new Date().toLocaleString("pt-BR"), margin, pageH - 8);
     pdf.text(`Página ${pageNum}`, pageW - margin, pageH - 8, { align: "right" });
   };
 

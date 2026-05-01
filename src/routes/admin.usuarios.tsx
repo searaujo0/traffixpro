@@ -48,7 +48,7 @@ import { useAuth } from "@/contexts/AuthContext";
 export const Route = createFileRoute("/admin/usuarios")({
   head: () => ({
     meta: [
-      { title: "Usuários — TraffixPro" },
+      { title: "Usuários — M1 Digital" },
       { name: "description", content: "Gerencie usuários, papéis e acessos." },
     ],
   }),

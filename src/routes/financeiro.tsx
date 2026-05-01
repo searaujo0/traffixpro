@@ -8,7 +8,7 @@ import { brl } from "@/lib/format";
 export const Route = createFileRoute("/financeiro")({
   head: () => ({
     meta: [
-      { title: "Financeiro — TraffixPro" },
+      { title: "Financeiro — M1 Digital" },
       { name: "description", content: "Vendas registradas pelos clientes." },
     ],
   }),

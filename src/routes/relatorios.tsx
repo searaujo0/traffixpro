@@ -17,7 +17,7 @@ import { fetchDashboard, type DailyPoint, type DashboardSummary, type Period } f
 export const Route = createFileRoute("/relatorios")({
   head: () => ({
     meta: [
-      { title: "Relatórios — TraffixPro" },
+      { title: "Relatórios — M1 Digital" },
       { name: "description", content: "Relatórios consolidados das suas campanhas." },
     ],
   }),
