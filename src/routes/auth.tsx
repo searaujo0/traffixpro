@@ -1,14 +1,15 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
-import { Activity, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/input";
+import logoM1 from "@/assets/m1-logo.png";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Entrar — TraffixPro" },
-      { name: "description", content: "Acesse sua conta TraffixPro." },
+      { title: "Entrar — M1 Digital" },
+      { name: "description", content: "Acesse sua conta M1 Digital." },
     ],
   }),
   component: AuthPage,
@@ -41,10 +42,8 @@ function AuthPage() {
     <div className="min-h-screen flex items-center justify-center px-4 bg-background">
       <div className="w-full max-w-sm">
         <div className="flex flex-col items-center mb-8">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[image:var(--gradient-primary)] shadow-[var(--shadow-glow)] mb-3">
-            <Activity className="h-6 w-6 text-primary-foreground" strokeWidth={2.5} />
-          </div>
-          <h1 className="text-xl font-semibold">TraffixPro</h1>
+          <img src={logoM1} alt="M1 Digital" className="h-14 w-14 object-contain mb-3" />
+          <h1 className="text-xl font-semibold">M1 Digital</h1>
           <p className="text-xs text-muted-foreground mt-1">Acesse seu painel</p>
         </div>
 
