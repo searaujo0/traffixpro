@@ -32,7 +32,7 @@ export const Route = createFileRoute("/meu-painel")({
   component: ClientPanel,
 });
 
-type ClientLite = { id: string; name: string };
+type ClientLite = { id: string; name: string; marketing_team_cost: number | null };
 type SaleRow = { id: string; sale_date: string; quantity: number; unit_value: number; notes: string | null };
 
 type QuickRange = "today" | "7d" | "30d" | "thisMonth" | "lastMonth" | "custom";
@@ -143,7 +143,7 @@ function ClientPanel() {
 
   async function loadClient() {
     setBusy(true);
-    const { data } = await supabase.from("clients").select("id, name").maybeSingle();
+    const { data } = await supabase.from("clients").select("id, name, marketing_team_cost").maybeSingle();
     setClient((data as ClientLite | null) ?? null);
     if (!data) setBusy(false);
   }
@@ -298,6 +298,16 @@ function ClientPanel() {
               {m?.hasData ? "Resumo das suas campanhas no período selecionado." : "Sem dados ainda neste período."}
             </p>
           </div>
+
+          {client && (client.marketing_team_cost == null || Number(client.marketing_team_cost) === 0) && (
+            <div className="rounded-xl border border-warning/40 bg-warning/10 px-4 py-3 text-sm flex items-start gap-3">
+              <Activity className="h-4 w-4 mt-0.5 text-warning shrink-0" />
+              <div>
+                <p className="font-medium text-warning">Configure o valor da Equipe de Marketing</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Sem esse valor o cálculo de ROI/ROAS fica impreciso. Peça ao seu gestor para preencher no cadastro do cliente.</p>
+              </div>
+            </div>
+          )}
 
           {/* Period selector */}
           <div className="flex flex-wrap items-center gap-2">
