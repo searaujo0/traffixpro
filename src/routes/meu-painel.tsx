@@ -466,6 +466,32 @@ function ClientPanel() {
                     );
                   })}
                 </tbody>
+                {daily.length > 0 && (() => {
+                  const totSpend = daily.reduce((s, d) => s + d.spend, 0);
+                  const totClicks = daily.reduce((s, d) => s + d.clicks, 0);
+                  const totImpr = daily.reduce((s, d) => s + d.impressions, 0);
+                  const totMsg = daily.reduce((s, d) => s + d.messages, 0);
+                  const totSales = daily.reduce((s, d) => s + d.salesValue, 0);
+                  const ctrAvg = totImpr ? (totClicks / totImpr) * 100 : 0;
+                  const cpmAvg = totMsg ? totSpend / totMsg : 0;
+                  const roiTot = totSpend ? ((totSales - totSpend) / totSpend) * 100 : 0;
+                  return (
+                    <tfoot className="bg-secondary/30 font-semibold">
+                      <tr className="border-t-2 border-border">
+                        <td className="px-4 py-2.5">Total / Média</td>
+                        <td className="px-4 py-2.5 text-right">{brl(totSpend)}</td>
+                        <td className="px-4 py-2.5 text-right">{num(totClicks)}</td>
+                        <td className="px-4 py-2.5 text-right">{pct(ctrAvg)}</td>
+                        <td className="px-4 py-2.5 text-right">{num(totMsg)}</td>
+                        <td className="px-4 py-2.5 text-right">{cpmAvg ? brlPrecise(cpmAvg) : "—"}</td>
+                        <td className="px-4 py-2.5 text-right">{brl(totSales)}</td>
+                        <td className={cn("px-4 py-2.5 text-right", totSpend ? (roiTot >= 0 ? "text-success" : "text-destructive") : "text-muted-foreground")}>
+                          {totSpend ? pct(roiTot) : "—"}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  );
+                })()}
               </table>
             </div>
           </div>
