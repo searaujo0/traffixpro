@@ -5,7 +5,7 @@ import { AppLayout } from "@/components/AppLayout";
 export const Route = createFileRoute("/insights")({
   head: () => ({
     meta: [
-      { title: "Insights — TraffixPro" },
+      { title: "Insights — M1 Digital" },
       { name: "description", content: "Recomendações automáticas baseadas no desempenho real." },
     ],
   }),

@@ -32,7 +32,7 @@ import {
 export const Route = createFileRoute("/clientes")({
   head: () => ({
     meta: [
-      { title: "Clientes — TraffixPro" },
+      { title: "Clientes — M1 Digital" },
       { name: "description", content: "Gerencie todos os seus clientes em um só lugar." },
     ],
   }),

@@ -2,9 +2,9 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
 import {
-  Activity, LogOut, Loader2, Plus, RefreshCw, Settings2, Download, FileText,
+  LogOut, Loader2, Plus, RefreshCw, Settings2, Download, FileText,
   CalendarIcon, Trash2, Wallet, MousePointerClick, MessageCircle, ShoppingBag,
-  TrendingUp, Eye, Target, Percent, Users,
+  TrendingUp, Eye, Target, Percent, Users, Activity,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,18 +20,19 @@ import { META_METRIC_LABELS } from "@/lib/metaLabels";
 import { generateClientReportPDF } from "@/lib/clientReportPdf";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { cn } from "@/lib/utils";
+import logoM1 from "@/assets/m1-logo.png";
 
 export const Route = createFileRoute("/meu-painel")({
   head: () => ({
     meta: [
-      { title: "Meu Painel — TraffixPro" },
+      { title: "Meu Painel — M1 Digital" },
       { name: "description", content: "Acompanhe suas campanhas, leads e o retorno do investimento." },
     ],
   }),
   component: ClientPanel,
 });
 
-type ClientLite = { id: string; name: string };
+type ClientLite = { id: string; name: string; marketing_team_cost: number | null };
 type SaleRow = { id: string; sale_date: string; quantity: number; unit_value: number; notes: string | null };
 
 type QuickRange = "today" | "7d" | "30d" | "thisMonth" | "lastMonth" | "custom";
@@ -142,7 +143,7 @@ function ClientPanel() {
 
   async function loadClient() {
     setBusy(true);
-    const { data } = await supabase.from("clients").select("id, name").maybeSingle();
+    const { data } = await supabase.from("clients").select("id, name, marketing_team_cost").maybeSingle();
     setClient((data as ClientLite | null) ?? null);
     if (!data) setBusy(false);
   }
@@ -278,9 +279,7 @@ function ClientPanel() {
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 flex items-center gap-3 px-4 md:px-8 h-16 border-b border-border bg-background/70 backdrop-blur-xl">
         <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[image:var(--gradient-primary)] shadow-[var(--shadow-glow)]">
-            <Activity className="h-5 w-5 text-primary-foreground" strokeWidth={2.5} />
-          </div>
+          <img src={logoM1} alt="M1 Digital" className="h-9 w-9 object-contain" />
           <div>
             <p className="text-sm font-semibold leading-tight">{client.name}</p>
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Seu painel</p>
@@ -299,6 +298,16 @@ function ClientPanel() {
               {m?.hasData ? "Resumo das suas campanhas no período selecionado." : "Sem dados ainda neste período."}
             </p>
           </div>
+
+          {client && (client.marketing_team_cost == null || Number(client.marketing_team_cost) === 0) && (
+            <div className="rounded-xl border border-warning/40 bg-warning/10 px-4 py-3 text-sm flex items-start gap-3">
+              <Activity className="h-4 w-4 mt-0.5 text-warning shrink-0" />
+              <div>
+                <p className="font-medium text-warning">Configure o valor da Equipe de Marketing</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Sem esse valor o cálculo de ROI/ROAS fica impreciso. Peça ao seu gestor para preencher no cadastro do cliente.</p>
+              </div>
+            </div>
+          )}
 
           {/* Period selector */}
           <div className="flex flex-wrap items-center gap-2">
@@ -467,6 +476,32 @@ function ClientPanel() {
                     );
                   })}
                 </tbody>
+                {daily.length > 0 && (() => {
+                  const totSpend = daily.reduce((s, d) => s + d.spend, 0);
+                  const totClicks = daily.reduce((s, d) => s + d.clicks, 0);
+                  const totImpr = daily.reduce((s, d) => s + d.impressions, 0);
+                  const totMsg = daily.reduce((s, d) => s + d.messages, 0);
+                  const totSales = daily.reduce((s, d) => s + d.salesValue, 0);
+                  const ctrAvg = totImpr ? (totClicks / totImpr) * 100 : 0;
+                  const cpmAvg = totMsg ? totSpend / totMsg : 0;
+                  const roiTot = totSpend ? ((totSales - totSpend) / totSpend) * 100 : 0;
+                  return (
+                    <tfoot className="bg-secondary/30 font-semibold">
+                      <tr className="border-t-2 border-border">
+                        <td className="px-4 py-2.5">Total / Média</td>
+                        <td className="px-4 py-2.5 text-right">{brl(totSpend)}</td>
+                        <td className="px-4 py-2.5 text-right">{num(totClicks)}</td>
+                        <td className="px-4 py-2.5 text-right">{pct(ctrAvg)}</td>
+                        <td className="px-4 py-2.5 text-right">{num(totMsg)}</td>
+                        <td className="px-4 py-2.5 text-right">{cpmAvg ? brlPrecise(cpmAvg) : "—"}</td>
+                        <td className="px-4 py-2.5 text-right">{brl(totSales)}</td>
+                        <td className={cn("px-4 py-2.5 text-right", totSpend ? (roiTot >= 0 ? "text-success" : "text-destructive") : "text-muted-foreground")}>
+                          {totSpend ? pct(roiTot) : "—"}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  );
+                })()}
               </table>
             </div>
           </div>

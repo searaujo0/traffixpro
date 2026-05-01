@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 export const Route = createFileRoute("/setup")({
   head: () => ({
     meta: [
-      { title: "Setup inicial — TraffixPro" },
+      { title: "Setup inicial — M1 Digital" },
       { name: "description", content: "Crie o primeiro administrador do sistema." },
     ],
   }),

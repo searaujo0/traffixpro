@@ -9,7 +9,7 @@ import { META_METRIC_LABELS } from "@/lib/metaLabels";
 export const Route = createFileRoute("/campanhas")({
   head: () => ({
     meta: [
-      { title: "Campanhas — TraffixPro" },
+      { title: "Campanhas — M1 Digital" },
       { name: "description", content: "Suas contas de anúncio sincronizadas via Meta Ads." },
     ],
   }),
