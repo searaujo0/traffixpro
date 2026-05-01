@@ -10,6 +10,19 @@ import { brl, brlPrecise, dateBR, num, pct } from "@/lib/format";
 import { generateClientReportPDF } from "@/lib/clientReportPdf";
 import { META_METRIC_LABELS } from "@/lib/metaLabels";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+
+type PaymentRow = {
+  id: string;
+  reference_year: number;
+  reference_month: number;
+  amount: number;
+  payment_date: string;
+  status: "pago" | "pendente" | "atrasado";
+  notes: string | null;
+};
+
+const MONTH_NAMES = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 
 export const Route = createFileRoute("/clientes/$id")({
   head: () => ({
@@ -28,6 +41,7 @@ function ClientDetailPage() {
   const [daily, setDaily] = useState<DailyPoint[]>([]);
   const [accounts, setAccounts] = useState<AccountPerformance[]>([]);
   const [sales, setSales] = useState<SaleRow[]>([]);
+  const [payments, setPayments] = useState<PaymentRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -37,17 +51,24 @@ function ClientDetailPage() {
   async function load() {
     setLoading(true);
     try {
-      const [c, dash, accs, sls] = await Promise.all([
+      const [c, dash, accs, sls, pays] = await Promise.all([
         fetchClient(id),
         fetchDashboard("30d", id),
         fetchAccountPerformance("30d", id),
         fetchSales(id),
+        supabase
+          .from("client_payments")
+          .select("id, reference_year, reference_month, amount, payment_date, status, notes")
+          .eq("client_id", id)
+          .order("reference_year", { ascending: false })
+          .order("reference_month", { ascending: false }),
       ]);
       setClient(c);
       setSummary(dash.summary);
       setDaily(dash.daily);
       setAccounts(accs);
       setSales(sls);
+      setPayments(((pays.data ?? []) as PaymentRow[]));
     } catch {
       toast.error("Falha ao carregar dados reais do cliente");
     } finally {
@@ -113,7 +134,7 @@ function ClientDetailPage() {
           </div>
 
           <div className="space-y-6 bg-background">
-            <ClientReport client={client} summary={summary} daily={daily} accounts={accounts} sales={sales} />
+            <ClientReport client={client} summary={summary} daily={daily} accounts={accounts} sales={sales} payments={payments} />
           </div>
         </div>
       )}
@@ -121,7 +142,9 @@ function ClientDetailPage() {
   );
 }
 
-function ClientReport({ client, summary, daily, accounts, sales }: { client: ClientRow; summary: DashboardSummary; daily: DailyPoint[]; accounts: AccountPerformance[]; sales: SaleRow[] }) {
+function ClientReport({ client, summary, daily, accounts, sales, payments }: { client: ClientRow; summary: DashboardSummary; daily: DailyPoint[]; accounts: AccountPerformance[]; sales: SaleRow[]; payments: PaymentRow[] }) {
+  const ltv = payments.filter((p) => p.status === "pago").reduce((s, p) => s + Number(p.amount), 0);
+  const monthsPaid = payments.filter((p) => p.status === "pago").length;
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -194,6 +217,54 @@ function ClientReport({ client, summary, daily, accounts, sales }: { client: Cli
       <div className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-card)]">
         <h3 className="text-base font-semibold mb-4">Vendas registradas</h3>
         {sales.length === 0 ? <p className="text-sm text-muted-foreground">Nenhuma venda registrada no período.</p> : <p className="text-sm text-muted-foreground">{sales.length} registro{sales.length === 1 ? "" : "s"} de venda no histórico do cliente.</p>}
+      </div>
+
+      <div className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-card)]">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-base font-semibold">Histórico de pagamentos</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">Mensalidades pagas pelo cliente.</p>
+          </div>
+          <div className="text-right">
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">LTV</p>
+            <p className="text-lg font-semibold text-success">{brl(ltv)}</p>
+            <p className="text-[10px] text-muted-foreground">{monthsPaid} mês(es) pagos</p>
+          </div>
+        </div>
+        {payments.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-6 text-center">Nenhum pagamento registrado. Use a página Financeiro para registrar.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-[11px] uppercase tracking-wider text-muted-foreground border-b border-border">
+                  <th className="py-2 pr-3">Mês ref.</th>
+                  <th className="py-2 pr-3">Valor</th>
+                  <th className="py-2 pr-3">Pago em</th>
+                  <th className="py-2 pr-3">Status</th>
+                  <th className="py-2 pr-3">Obs.</th>
+                </tr>
+              </thead>
+              <tbody>
+                {payments.map((p) => (
+                  <tr key={p.id} className="border-b border-border/50">
+                    <td className="py-2.5 pr-3 font-medium">{MONTH_NAMES[p.reference_month - 1]}/{p.reference_year}</td>
+                    <td className="py-2.5 pr-3">{brl(Number(p.amount))}</td>
+                    <td className="py-2.5 pr-3">{new Date(p.payment_date).toLocaleDateString("pt-BR")}</td>
+                    <td className="py-2.5 pr-3">
+                      <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${
+                        p.status === "pago" ? "bg-success/15 text-success"
+                        : p.status === "pendente" ? "bg-warning/15 text-warning"
+                        : "bg-destructive/15 text-destructive"
+                      }`}>{p.status}</span>
+                    </td>
+                    <td className="py-2.5 pr-3 text-xs text-muted-foreground">{p.notes ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </>
   );
