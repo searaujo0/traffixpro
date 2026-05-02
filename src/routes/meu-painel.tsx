@@ -546,6 +546,14 @@ function ClientPanel() {
           </div>
         </div>
 
+        {/* Monthly comparison */}
+        <MonthlyComparison
+          cmpA={cmpA} setCmpA={setCmpA}
+          cmpB={cmpB} setCmpB={setCmpB}
+          dataA={cmpDataA} dataB={cmpDataB}
+          busy={cmpBusy}
+        />
+
         {/* Sales */}
         <div className="grid gap-4 lg:grid-cols-2">
           <form onSubmit={addSale} className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-card)]">
