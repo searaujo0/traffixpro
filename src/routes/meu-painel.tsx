@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import {
   LogOut, Loader2, Plus, RefreshCw, Settings2, Download, FileText,
   CalendarIcon, Trash2, Wallet, MousePointerClick, MessageCircle, ShoppingBag,
-  TrendingUp, Eye, Target, Percent, Users, Activity,
+  TrendingUp, Eye, Target, Percent, Users, Activity, GitCompareArrows, ArrowUp, ArrowDown,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -107,6 +107,17 @@ function ClientPanel() {
   });
   const [chartMetric, setChartMetric] = useState<"spend" | "clicks" | "messages" | "salesValue">("spend");
 
+  // Comparison state
+  const now = new Date();
+  const [cmpA, setCmpA] = useState<{ y: number; m: number }>({ y: now.getFullYear(), m: now.getMonth() + 1 });
+  const [cmpB, setCmpB] = useState<{ y: number; m: number }>(() => {
+    const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    return { y: d.getFullYear(), m: d.getMonth() + 1 };
+  });
+  const [cmpDataA, setCmpDataA] = useState<DashboardSummary | null>(null);
+  const [cmpDataB, setCmpDataB] = useState<DashboardSummary | null>(null);
+  const [cmpBusy, setCmpBusy] = useState(false);
+
   // Sale form
   const [saleDate, setSaleDate] = useState<Date>(new Date());
   const [saleQty, setSaleQty] = useState("1");
@@ -168,6 +179,34 @@ function ClientPanel() {
       .limit(10);
     setSales((data as SaleRow[] | null) ?? []);
   }
+
+  async function loadComparison() {
+    if (!client) return;
+    setCmpBusy(true);
+    try {
+      const monthRange = (y: number, m: number) => {
+        const first = new Date(y, m - 1, 1);
+        const last = new Date(y, m, 0);
+        return { since: toIso(first), until: toIso(last) };
+      };
+      const [ra, rb] = await Promise.all([
+        fetchDashboard(monthRange(cmpA.y, cmpA.m), client.id),
+        fetchDashboard(monthRange(cmpB.y, cmpB.m), client.id),
+      ]);
+      setCmpDataA(ra.summary);
+      setCmpDataB(rb.summary);
+    } catch (e) {
+      console.error(e);
+      toast.error("Falha ao carregar comparativo");
+    } finally {
+      setCmpBusy(false);
+    }
+  }
+
+  useEffect(() => {
+    if (client) void loadComparison();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [client, cmpA.y, cmpA.m, cmpB.y, cmpB.m]);
 
   async function addSale(e: React.FormEvent) {
     e.preventDefault();
