@@ -81,8 +81,8 @@ function DashboardPage() {
   async function loadClientStats() {
     const { data: clientsData } = await supabase
       .from("clients")
-      .select("id, status, contract_value, created_at, cancelled_at" as never);
-    const all = (clientsData ?? []) as Array<{ id: string; status: string; contract_value: number | string | null; created_at: string; cancelled_at: string | null }>;
+      .select("id, status, contract_value, created_at, cancelled_at");
+    const all = ((clientsData ?? []) as unknown) as Array<{ id: string; status: string; contract_value: number | string | null; created_at: string; cancelled_at: string | null }>;
     const active = all.filter((c) => c.status === "ativo").length;
     const inactive = all.filter((c) => c.status !== "ativo").length;
     const newInPeriod = all.filter((c) => c.created_at.slice(0, 10) >= range.since && c.created_at.slice(0, 10) <= range.until).length;
