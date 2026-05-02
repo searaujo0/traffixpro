@@ -81,15 +81,25 @@ function DashboardPage() {
   async function loadClientStats() {
     const { data: clientsData } = await supabase
       .from("clients")
-      .select("id, status, contract_value, created_at");
-    const all = (clientsData ?? []) as Array<{ id: string; status: string; contract_value: number | string | null; created_at: string }>;
+      .select("id, status, contract_value, created_at, cancelled_at" as never);
+    const all = (clientsData ?? []) as Array<{ id: string; status: string; contract_value: number | string | null; created_at: string; cancelled_at: string | null }>;
     const active = all.filter((c) => c.status === "ativo").length;
     const inactive = all.filter((c) => c.status !== "ativo").length;
     const newInPeriod = all.filter((c) => c.created_at.slice(0, 10) >= range.since && c.created_at.slice(0, 10) <= range.until).length;
-    // Churn = clientes inativos cuja "data" (usamos created_at como aproximação se não há campo de cancelamento) está no período. Como não temos cancellation_date, usamos count atual de inativos como base.
-    const churnedInPeriod = inactive; // simplificação: total de inativos
-    const baseForChurn = active + inactive;
-    const churnRate = baseForChurn ? (inactive / baseForChurn) * 100 : 0;
+    // Churn preciso: clientes cancelados dentro do período selecionado
+    const churnedInPeriod = all.filter((c) => {
+      if (!c.cancelled_at) return false;
+      const d = c.cancelled_at.slice(0, 10);
+      return d >= range.since && d <= range.until;
+    }).length;
+    // Base = clientes ativos no início do período + churn no período
+    const activeAtStart = all.filter((c) => {
+      const created = c.created_at.slice(0, 10);
+      if (created > range.since) return false;
+      if (!c.cancelled_at) return true;
+      return c.cancelled_at.slice(0, 10) >= range.since;
+    }).length;
+    const churnRate = activeAtStart ? (churnedInPeriod / activeAtStart) * 100 : 0;
     const mrr = all
       .filter((c) => c.status === "ativo")
       .reduce((s, c) => s + Number(c.contract_value ?? 0), 0);
