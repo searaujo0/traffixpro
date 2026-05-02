@@ -235,6 +235,7 @@ export type Database = {
       }
       clients: {
         Row: {
+          cancelled_at: string | null
           commission_pct: number
           contact_email: string | null
           contract_value: number
@@ -248,6 +249,7 @@ export type Database = {
           status: string
         }
         Insert: {
+          cancelled_at?: string | null
           commission_pct?: number
           contact_email?: string | null
           contract_value?: number
@@ -261,6 +263,7 @@ export type Database = {
           status?: string
         }
         Update: {
+          cancelled_at?: string | null
           commission_pct?: number
           contact_email?: string | null
           contract_value?: number
