@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import {
   LogOut, Loader2, Plus, RefreshCw, Settings2, Download, FileText,
   CalendarIcon, Trash2, Wallet, MousePointerClick, MessageCircle, ShoppingBag,
-  TrendingUp, Eye, Target, Percent, Users, Activity,
+  TrendingUp, Eye, Target, Percent, Users, Activity, GitCompareArrows, ArrowUp, ArrowDown,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -107,6 +107,17 @@ function ClientPanel() {
   });
   const [chartMetric, setChartMetric] = useState<"spend" | "clicks" | "messages" | "salesValue">("spend");
 
+  // Comparison state
+  const now = new Date();
+  const [cmpA, setCmpA] = useState<{ y: number; m: number }>({ y: now.getFullYear(), m: now.getMonth() + 1 });
+  const [cmpB, setCmpB] = useState<{ y: number; m: number }>(() => {
+    const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    return { y: d.getFullYear(), m: d.getMonth() + 1 };
+  });
+  const [cmpDataA, setCmpDataA] = useState<DashboardSummary | null>(null);
+  const [cmpDataB, setCmpDataB] = useState<DashboardSummary | null>(null);
+  const [cmpBusy, setCmpBusy] = useState(false);
+
   // Sale form
   const [saleDate, setSaleDate] = useState<Date>(new Date());
   const [saleQty, setSaleQty] = useState("1");
@@ -168,6 +179,34 @@ function ClientPanel() {
       .limit(10);
     setSales((data as SaleRow[] | null) ?? []);
   }
+
+  async function loadComparison() {
+    if (!client) return;
+    setCmpBusy(true);
+    try {
+      const monthRange = (y: number, m: number) => {
+        const first = new Date(y, m - 1, 1);
+        const last = new Date(y, m, 0);
+        return { since: toIso(first), until: toIso(last) };
+      };
+      const [ra, rb] = await Promise.all([
+        fetchDashboard(monthRange(cmpA.y, cmpA.m), client.id),
+        fetchDashboard(monthRange(cmpB.y, cmpB.m), client.id),
+      ]);
+      setCmpDataA(ra.summary);
+      setCmpDataB(rb.summary);
+    } catch (e) {
+      console.error(e);
+      toast.error("Falha ao carregar comparativo");
+    } finally {
+      setCmpBusy(false);
+    }
+  }
+
+  useEffect(() => {
+    if (client) void loadComparison();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [client, cmpA.y, cmpA.m, cmpB.y, cmpB.m]);
 
   async function addSale(e: React.FormEvent) {
     e.preventDefault();
@@ -507,6 +546,14 @@ function ClientPanel() {
           </div>
         </div>
 
+        {/* Monthly comparison */}
+        <MonthlyComparison
+          cmpA={cmpA} setCmpA={setCmpA}
+          cmpB={cmpB} setCmpB={setCmpB}
+          dataA={cmpDataA} dataB={cmpDataB}
+          busy={cmpBusy}
+        />
+
         {/* Sales */}
         <div className="grid gap-4 lg:grid-cols-2">
           <form onSubmit={addSale} className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-card)]">
@@ -600,5 +647,125 @@ function DatePick({ value, onChange, placeholder }: { value?: Date; onChange: (d
         <Calendar mode="single" selected={value} onSelect={onChange} className={cn("p-3 pointer-events-auto")} />
       </PopoverContent>
     </Popover>
+  );
+}
+
+const MONTH_NAMES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+
+function MonthPicker({ value, onChange, label }: {
+  value: { y: number; m: number };
+  onChange: (v: { y: number; m: number }) => void;
+  label: string;
+}) {
+  const years = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - i);
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-xs text-muted-foreground">{label}:</span>
+      <select
+        value={value.m}
+        onChange={(e) => onChange({ ...value, m: Number(e.target.value) })}
+        className="h-8 rounded-md border border-border bg-background px-2 text-xs"
+      >
+        {MONTH_NAMES.map((n, i) => <option key={i} value={i + 1}>{n}</option>)}
+      </select>
+      <select
+        value={value.y}
+        onChange={(e) => onChange({ ...value, y: Number(e.target.value) })}
+        className="h-8 rounded-md border border-border bg-background px-2 text-xs"
+      >
+        {years.map((y) => <option key={y} value={y}>{y}</option>)}
+      </select>
+    </div>
+  );
+}
+
+function DeltaCell({ a, b, format = "num", invertColor = false }: {
+  a: number; b: number;
+  format?: "num" | "brl" | "pct" | "brlPrecise";
+  invertColor?: boolean;
+}) {
+  const fmt = (n: number) =>
+    format === "brl" ? brl(n)
+    : format === "brlPrecise" ? brlPrecise(n)
+    : format === "pct" ? pct(n)
+    : num(n);
+  const diff = a - b;
+  const pctDiff = b !== 0 ? (diff / Math.abs(b)) * 100 : (a !== 0 ? 100 : 0);
+  const positive = diff >= 0;
+  const good = invertColor ? !positive : positive;
+  const tone = diff === 0 ? "text-muted-foreground" : good ? "text-success" : "text-destructive";
+  return (
+    <div className="flex flex-col items-end">
+      <span className="font-medium">{fmt(a)}</span>
+      <span className="text-[10px] text-muted-foreground">vs {fmt(b)}</span>
+      <span className={cn("text-[10px] font-medium flex items-center gap-0.5", tone)}>
+        {diff !== 0 && (positive ? <ArrowUp className="h-2.5 w-2.5" /> : <ArrowDown className="h-2.5 w-2.5" />)}
+        {pctDiff.toFixed(1).replace(".", ",")}%
+      </span>
+    </div>
+  );
+}
+
+function MonthlyComparison({ cmpA, setCmpA, cmpB, setCmpB, dataA, dataB, busy }: {
+  cmpA: { y: number; m: number };
+  setCmpA: (v: { y: number; m: number }) => void;
+  cmpB: { y: number; m: number };
+  setCmpB: (v: { y: number; m: number }) => void;
+  dataA: DashboardSummary | null;
+  dataB: DashboardSummary | null;
+  busy: boolean;
+}) {
+  const monthLabel = (v: { y: number; m: number }) => `${MONTH_NAMES[v.m - 1]}/${v.y}`;
+  const a = dataA;
+  const b = dataB;
+  const rows: Array<{ label: string; a: number; b: number; format?: "num" | "brl" | "pct" | "brlPrecise"; invert?: boolean }> = [
+    { label: "Investimento", a: a?.spend ?? 0, b: b?.spend ?? 0, format: "brl", invert: true },
+    { label: "Cliques", a: a?.clicks ?? 0, b: b?.clicks ?? 0 },
+    { label: "CTR", a: a?.ctr ?? 0, b: b?.ctr ?? 0, format: "pct" },
+    { label: "CPC", a: a?.cpc ?? 0, b: b?.cpc ?? 0, format: "brlPrecise", invert: true },
+    { label: "Mensagens", a: a?.messages ?? 0, b: b?.messages ?? 0 },
+    { label: "Custo/Msg", a: a?.costPerMessage ?? 0, b: b?.costPerMessage ?? 0, format: "brlPrecise", invert: true },
+    { label: "Vendas (R$)", a: a?.revenue ?? 0, b: b?.revenue ?? 0, format: "brl" },
+    { label: "ROI", a: a?.roi ?? 0, b: b?.roi ?? 0, format: "pct" },
+    { label: "ROAS", a: a?.roas ?? 0, b: b?.roas ?? 0 },
+  ];
+  return (
+    <div className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-card)]">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div className="flex items-center gap-2">
+          <GitCompareArrows className="h-4 w-4 text-primary" />
+          <h2 className="text-base font-semibold">Comparativo mensal</h2>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <MonthPicker label="Mês A" value={cmpA} onChange={setCmpA} />
+          <span className="text-xs text-muted-foreground">vs</span>
+          <MonthPicker label="Mês B" value={cmpB} onChange={setCmpB} />
+        </div>
+      </div>
+      {busy ? (
+        <div className="py-8 flex justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead className="bg-secondary/40 text-muted-foreground">
+              <tr>
+                <th className="text-left font-medium px-4 py-2">Métrica</th>
+                <th className="text-right font-medium px-4 py-2">{monthLabel(cmpA)} vs {monthLabel(cmpB)}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.label} className="border-t border-border/50">
+                  <td className="px-4 py-2.5">{r.label}</td>
+                  <td className="px-4 py-2.5 text-right">
+                    <DeltaCell a={r.a} b={r.b} format={r.format} invertColor={r.invert} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
   );
 }
