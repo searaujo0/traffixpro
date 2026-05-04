@@ -11,6 +11,7 @@ import { generateClientReportPDF } from "@/lib/clientReportPdf";
 import { META_METRIC_LABELS } from "@/lib/metaLabels";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { ContractsManager } from "@/components/ContractsManager";
 
 type PaymentRow = {
   id: string;
@@ -134,7 +135,7 @@ function ClientDetailPage() {
           </div>
 
           <div className="space-y-6 bg-background">
-            <ClientReport client={client} summary={summary} daily={daily} accounts={accounts} sales={sales} payments={payments} />
+            <ClientReport clientId={id} client={client} summary={summary} daily={daily} accounts={accounts} sales={sales} payments={payments} />
           </div>
         </div>
       )}
@@ -142,7 +143,7 @@ function ClientDetailPage() {
   );
 }
 
-function ClientReport({ client, summary, daily, accounts, sales, payments }: { client: ClientRow; summary: DashboardSummary; daily: DailyPoint[]; accounts: AccountPerformance[]; sales: SaleRow[]; payments: PaymentRow[] }) {
+function ClientReport({ clientId, client, summary, daily, accounts, sales, payments }: { clientId: string; client: ClientRow; summary: DashboardSummary; daily: DailyPoint[]; accounts: AccountPerformance[]; sales: SaleRow[]; payments: PaymentRow[] }) {
   const ltv = payments.filter((p) => p.status === "pago").reduce((s, p) => s + Number(p.amount), 0);
   const monthsPaid = payments.filter((p) => p.status === "pago").length;
   return (
@@ -218,6 +219,8 @@ function ClientReport({ client, summary, daily, accounts, sales, payments }: { c
         <h3 className="text-base font-semibold mb-4">Vendas registradas</h3>
         {sales.length === 0 ? <p className="text-sm text-muted-foreground">Nenhuma venda registrada no período.</p> : <p className="text-sm text-muted-foreground">{sales.length} registro{sales.length === 1 ? "" : "s"} de venda no histórico do cliente.</p>}
       </div>
+
+      <ContractsManager clientId={clientId} />
 
       <div className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-card)]">
         <div className="flex items-center justify-between mb-4">

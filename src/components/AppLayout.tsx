@@ -15,30 +15,40 @@ import {
   Sun,
   Moon,
   Receipt,
+  FileSignature,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useAuth, type AppRole } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { RoleGuard } from "@/components/RoleGuard";
+import { usePermissions, type NavKey } from "@/hooks/usePermissions";
 import logoM1 from "@/assets/m1-logo.png";
 
-const navItems = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/relatorios", label: "Relatórios", icon: FileBarChart },
-  { to: "/clientes", label: "Clientes", icon: Users },
-  { to: "/campanhas", label: "Campanhas", icon: Megaphone },
-  { to: "/financeiro", label: "Financeiro", icon: Wallet },
-  { to: "/comissoes", label: "Comissões", icon: Receipt },
-  { to: "/insights", label: "Insights", icon: Sparkles },
-  { to: "/integracoes/meta", label: "Meta Ads", icon: Plug },
-  { to: "/admin/usuarios", label: "Usuários", icon: UserCog },
-] as const;
+const navItems: { to: string; label: string; icon: typeof LayoutDashboard; key: NavKey }[] = [
+  { to: "/", label: "Dashboard", icon: LayoutDashboard, key: "dashboard" },
+  { to: "/relatorios", label: "Relatórios", icon: FileBarChart, key: "relatorios" },
+  { to: "/clientes", label: "Clientes", icon: Users, key: "clientes" },
+  { to: "/campanhas", label: "Campanhas", icon: Megaphone, key: "campanhas" },
+  { to: "/financeiro", label: "Financeiro", icon: Wallet, key: "financeiro" },
+  { to: "/contratos", label: "Contratos", icon: FileSignature, key: "contratos" },
+  { to: "/comissoes", label: "Comissões", icon: Receipt, key: "comissoes" },
+  { to: "/insights", label: "Insights", icon: Sparkles, key: "insights" },
+  { to: "/integracoes/meta", label: "Meta Ads", icon: Plug, key: "meta" },
+  { to: "/admin/usuarios", label: "Usuários", icon: UserCog, key: "usuarios" },
+];
 
-export function AppLayout({ children }: { children: ReactNode }) {
+export function AppLayout({
+  children,
+  allow,
+}: {
+  children: ReactNode;
+  allow?: AppRole[];
+}) {
   const { location } = useRouterState();
   const { user, profile, signOut } = useAuth();
   const { theme, toggle } = useTheme();
   const navigate = useNavigate();
+  const { can, role } = usePermissions();
 
   async function handleLogout() {
     await signOut();
@@ -53,7 +63,26 @@ export function AppLayout({ children }: { children: ReactNode }) {
     .join("")
     .toUpperCase();
 
-  const allowedRoles: AppRole[] = ["admin"];
+  // por padrão, layout aceita todos os papéis de equipe
+  const allowedRoles: AppRole[] = allow ?? ["admin", "financeiro", "social_media"];
+
+  const visibleNav = navItems.filter((item) => can(item.key));
+
+  const roleLabel =
+    role === "admin"
+      ? "Admin"
+      : role === "financeiro"
+        ? "Financeiro"
+        : role === "social_media"
+          ? "Social Media"
+          : "";
+
+  const subtitle =
+    role === "financeiro"
+      ? "Painel Financeiro"
+      : role === "social_media"
+        ? "Painel Social Media"
+        : "Painel do Gestor";
 
   return (
     <RoleGuard allow={allowedRoles}>
@@ -65,13 +94,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <div>
             <p className="text-sm font-semibold leading-tight">M1 Digital</p>
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
-              Painel do Gestor
+              {subtitle}
             </p>
           </div>
         </div>
 
         <nav className="flex-1 p-3 space-y-1">
-          {navItems.map((item) => {
+          {visibleNav.map((item) => {
             const active =
               item.to === "/"
                 ? location.pathname === "/"
@@ -142,7 +171,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 <p className="text-xs font-medium leading-tight truncate max-w-[140px]">
                   {displayName}
                 </p>
-                <p className="text-[10px] text-muted-foreground">Admin</p>
+                <p className="text-[10px] text-muted-foreground">{roleLabel}</p>
               </div>
               <button
                 onClick={handleLogout}
@@ -157,7 +186,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
         {/* Mobile nav */}
         <nav className="md:hidden flex gap-1 overflow-x-auto px-4 py-2 border-b border-border bg-background">
-          {navItems.map((item) => {
+          {visibleNav.map((item) => {
             const active =
               item.to === "/"
                 ? location.pathname === "/"

@@ -183,6 +183,91 @@ export type Database = {
           },
         ]
       }
+      client_assignments: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          client_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          client_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          client_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_assignments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_contracts: {
+        Row: {
+          client_id: string
+          created_at: string
+          created_by: string | null
+          end_date: string | null
+          id: string
+          is_indeterminate: boolean
+          monthly_value: number
+          notes: string | null
+          payment_day: number | null
+          start_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          end_date?: string | null
+          id?: string
+          is_indeterminate?: boolean
+          monthly_value?: number
+          notes?: string | null
+          payment_day?: number | null
+          start_date: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          end_date?: string | null
+          id?: string
+          is_indeterminate?: boolean
+          monthly_value?: number
+          notes?: string | null
+          payment_day?: number | null
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_contracts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_payments: {
         Row: {
           amount: number
@@ -403,6 +488,10 @@ export type Database = {
     }
     Functions: {
       bootstrap_first_admin: { Args: never; Returns: undefined }
+      has_any_role: {
+        Args: { _roles: string[]; _user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -410,9 +499,13 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_assigned_to_client: {
+        Args: { _client_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      app_role: "admin" | "cliente"
+      app_role: "admin" | "cliente" | "financeiro" | "social_media"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -540,7 +633,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "cliente"],
+      app_role: ["admin", "cliente", "financeiro", "social_media"],
     },
   },
 } as const
