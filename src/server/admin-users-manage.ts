@@ -12,7 +12,7 @@ export type ManagedUser = {
   email: string | null;
   created_at: string;
   last_sign_in_at: string | null;
-  role: "admin" | "cliente" | null;
+  role: "admin" | "cliente" | "financeiro" | "social_media" | null;
   client_id: string | null;
   client_name: string | null;
 };
@@ -54,7 +54,13 @@ export const listUsers = createServerFn({ method: "POST" })
         email: u.email ?? null,
         created_at: u.created_at,
         last_sign_in_at: u.last_sign_in_at ?? null,
-        role: (roleMap.get(u.id) as "admin" | "cliente" | undefined) ?? null,
+        role:
+          (roleMap.get(u.id) as
+            | "admin"
+            | "cliente"
+            | "financeiro"
+            | "social_media"
+            | undefined) ?? null,
         client_id: c?.id ?? null,
         client_name: c?.name ?? null,
       };
@@ -65,7 +71,7 @@ export const listUsers = createServerFn({ method: "POST" })
 
 const setRoleSchema = z.object({
   userId: z.string().uuid(),
-  role: z.enum(["admin", "cliente"]),
+  role: z.enum(["admin", "cliente", "financeiro", "social_media"]),
 });
 
 export const setUserRole = createServerFn({ method: "POST" })
