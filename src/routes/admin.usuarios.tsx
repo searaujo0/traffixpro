@@ -407,6 +407,106 @@ function UsuariosPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Criar usuário */}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Novo usuário</DialogTitle>
+            <DialogDescription>
+              Cria um usuário da equipe ou cliente. A senha inicial deve ser informada ao usuário.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleCreate} className="space-y-3">
+            <div>
+              <label className="text-xs text-muted-foreground">Nome</label>
+              <Input value={createForm.fullName} onChange={(e) => setCreateForm({ ...createForm, fullName: e.target.value })} />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">Email</label>
+              <Input type="email" required value={createForm.email} onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })} />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">Senha inicial</label>
+              <Input type="text" required minLength={6} value={createForm.password} onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })} />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">Papel</label>
+              <Select value={createForm.role} onValueChange={(v) => setCreateForm({ ...createForm, role: v as Role })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="financeiro">Financeiro</SelectItem>
+                  <SelectItem value="social_media">Social Media</SelectItem>
+                  <SelectItem value="cliente">Cliente</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {createForm.role === "social_media" && (
+              <div>
+                <label className="text-xs text-muted-foreground">Clientes atribuídos</label>
+                <div className="mt-1 max-h-48 overflow-y-auto rounded-lg border border-border p-2 space-y-1">
+                  {allClients.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">Nenhum cliente cadastrado.</p>
+                  ) : allClients.map((c) => (
+                    <label key={c.id} className="flex items-center gap-2 text-sm py-0.5">
+                      <input
+                        type="checkbox"
+                        checked={createForm.clientIds.includes(c.id)}
+                        onChange={(e) => {
+                          const next = e.target.checked
+                            ? [...createForm.clientIds, c.id]
+                            : createForm.clientIds.filter((x) => x !== c.id);
+                          setCreateForm({ ...createForm, clientIds: next });
+                        }}
+                      />
+                      {c.name}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+            <button type="submit" disabled={creating} className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-50">
+              {creating && <Loader2 className="h-4 w-4 animate-spin" />}
+              Criar usuário
+            </button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Atribuições */}
+      <Dialog open={!!assignTarget} onOpenChange={(o) => !o && setAssignTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Clientes atribuídos</DialogTitle>
+            <DialogDescription>
+              Selecione quais clientes <strong>{assignTarget?.email}</strong> pode acessar.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-72 overflow-y-auto rounded-lg border border-border p-2 space-y-1">
+            {allClients.map((c) => (
+              <label key={c.id} className="flex items-center gap-2 text-sm py-0.5">
+                <input
+                  type="checkbox"
+                  checked={assignSelected.includes(c.id)}
+                  onChange={(e) => {
+                    setAssignSelected(
+                      e.target.checked
+                        ? [...assignSelected, c.id]
+                        : assignSelected.filter((x) => x !== c.id),
+                    );
+                  }}
+                />
+                {c.name}
+              </label>
+            ))}
+          </div>
+          <button onClick={() => void saveAssignments()} disabled={assignSubmitting} className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-50">
+            {assignSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+            Salvar atribuições
+          </button>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
