@@ -25,7 +25,16 @@ export function RoleGuard({
       return;
     }
     if (!allow.includes(role)) {
-      navigate({ to: role === "admin" ? "/" : "/meu-painel" });
+      // redireciona para o landing apropriado de cada papel
+      const fallback =
+        role === "admin"
+          ? "/"
+          : role === "financeiro"
+            ? "/financeiro"
+            : role === "social_media"
+              ? "/clientes"
+              : "/meu-painel";
+      navigate({ to: fallback });
     }
   }, [user, role, loading]);
 
