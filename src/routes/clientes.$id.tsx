@@ -11,6 +11,7 @@ import { generateClientReportPDF } from "@/lib/clientReportPdf";
 import { META_METRIC_LABELS } from "@/lib/metaLabels";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { ContractsManager } from "@/components/ContractsManager";
 
 type PaymentRow = {
   id: string;
@@ -218,6 +219,8 @@ function ClientReport({ client, summary, daily, accounts, sales, payments }: { c
         <h3 className="text-base font-semibold mb-4">Vendas registradas</h3>
         {sales.length === 0 ? <p className="text-sm text-muted-foreground">Nenhuma venda registrada no período.</p> : <p className="text-sm text-muted-foreground">{sales.length} registro{sales.length === 1 ? "" : "s"} de venda no histórico do cliente.</p>}
       </div>
+
+      <ContractsManager clientId={id} />
 
       <div className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-card)]">
         <div className="flex items-center justify-between mb-4">
