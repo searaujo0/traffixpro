@@ -9,15 +9,23 @@ import {
   ShieldCheck,
   UserCog,
   RefreshCw,
+  UserPlus,
+  Users as UsersIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
   listUsers,
-  setUserRole,
   resetUserPassword,
   deleteUser,
   type ManagedUser,
 } from "@/server/admin-users-manage";
+import {
+  createTeamUser,
+  setTeamRole,
+  setUserAssignments,
+  listAssignmentsByUser,
+} from "@/server/team-users";
+import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -55,16 +63,24 @@ export const Route = createFileRoute("/admin/usuarios")({
   component: UsuariosPage,
 });
 
+type Role = "admin" | "cliente" | "financeiro" | "social_media";
+type ClientOption = { id: string; name: string };
+
 function UsuariosPage() {
   const { user: me } = useAuth();
   const callList = useServerFn(listUsers);
-  const callSetRole = useServerFn(setUserRole);
+  const callSetRole = useServerFn(setTeamRole);
   const callReset = useServerFn(resetUserPassword);
   const callDelete = useServerFn(deleteUser);
+  const callCreate = useServerFn(createTeamUser);
+  const callSetAssignments = useServerFn(setUserAssignments);
+  const callListAssign = useServerFn(listAssignmentsByUser);
 
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("");
+  const [assignByUser, setAssignByUser] = useState<Record<string, string[]>>({});
+  const [allClients, setAllClients] = useState<ClientOption[]>([]);
 
   const [pwUser, setPwUser] = useState<ManagedUser | null>(null);
   const [newPw, setNewPw] = useState("");
@@ -73,12 +89,29 @@ function UsuariosPage() {
   const [delUser, setDelUser] = useState<ManagedUser | null>(null);
   const [delSubmitting, setDelSubmitting] = useState(false);
 
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    email: "", password: "", fullName: "", role: "social_media" as Role,
+    clientIds: [] as string[],
+  });
+  const [creating, setCreating] = useState(false);
+
+  const [assignTarget, setAssignTarget] = useState<ManagedUser | null>(null);
+  const [assignSelected, setAssignSelected] = useState<string[]>([]);
+  const [assignSubmitting, setAssignSubmitting] = useState(false);
+
   async function load() {
     setLoading(true);
     try {
-      const res = await callList();
+      const [res, ass, cl] = await Promise.all([
+        callList(),
+        callListAssign(),
+        supabase.from("clients").select("id, name").order("name"),
+      ]);
       if (res?.error) toast.error(res.error);
       setUsers(res?.users ?? []);
+      setAssignByUser(ass.byUser ?? {});
+      setAllClients((cl.data ?? []) as ClientOption[]);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Falha ao carregar usuários");
       setUsers([]);
@@ -91,12 +124,51 @@ function UsuariosPage() {
     void load();
   }, []);
 
-  async function handleRoleChange(u: ManagedUser, role: "admin" | "cliente") {
+  async function handleRoleChange(u: ManagedUser, role: Role) {
     if (role === u.role) return;
     const res = await callSetRole({ data: { userId: u.id, role } });
     if (res.error) toast.error(res.error);
     else {
       toast.success(`${u.email} agora é ${role}`);
+      void load();
+    }
+  }
+
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault();
+    setCreating(true);
+    const res = await callCreate({
+      data: {
+        email: createForm.email,
+        password: createForm.password,
+        fullName: createForm.fullName || null,
+        role: createForm.role,
+        clientIds: createForm.role === "social_media" ? createForm.clientIds : [],
+      },
+    });
+    setCreating(false);
+    if (res.error) toast.error(res.error);
+    else {
+      toast.success("Usuário criado");
+      setCreateOpen(false);
+      setCreateForm({ email: "", password: "", fullName: "", role: "social_media", clientIds: [] });
+      void load();
+    }
+  }
+
+  function openAssignments(u: ManagedUser) {
+    setAssignTarget(u);
+    setAssignSelected(assignByUser[u.id] ?? []);
+  }
+  async function saveAssignments() {
+    if (!assignTarget) return;
+    setAssignSubmitting(true);
+    const res = await callSetAssignments({ data: { userId: assignTarget.id, clientIds: assignSelected } });
+    setAssignSubmitting(false);
+    if (res.error) toast.error(res.error);
+    else {
+      toast.success("Atribuições atualizadas");
+      setAssignTarget(null);
       void load();
     }
   }
@@ -144,8 +216,14 @@ function UsuariosPage() {
           </p>
         </div>
         <button
+          onClick={() => setCreateOpen(true)}
+          className="ml-auto inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition"
+        >
+          <UserPlus className="h-4 w-4" /> Novo usuário
+        </button>
+        <button
           onClick={() => void load()}
-          className="ml-auto inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-secondary/40 text-sm hover:bg-secondary transition"
+          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-secondary/40 text-sm hover:bg-secondary transition"
         >
           <RefreshCw className="h-4 w-4" /> Atualizar
         </button>
@@ -201,20 +279,32 @@ function UsuariosPage() {
                         <Select
                           value={u.role ?? ""}
                           onValueChange={(v) =>
-                            handleRoleChange(u, v as "admin" | "cliente")
+                            handleRoleChange(u, v as Role)
                           }
                         >
-                          <SelectTrigger className="h-8 w-32">
+                          <SelectTrigger className="h-8 w-36">
                             <SelectValue placeholder="—" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="admin">admin</SelectItem>
+                            <SelectItem value="financeiro">financeiro</SelectItem>
+                            <SelectItem value="social_media">social media</SelectItem>
                             <SelectItem value="cliente">cliente</SelectItem>
                           </SelectContent>
                         </Select>
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">
-                        {u.client_name ?? "—"}
+                        {u.role === "social_media" ? (
+                          <button
+                            onClick={() => openAssignments(u)}
+                            className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded border border-border hover:bg-secondary"
+                          >
+                            <UsersIcon className="h-3 w-3" />
+                            {(assignByUser[u.id]?.length ?? 0)} cliente(s)
+                          </button>
+                        ) : (
+                          u.client_name ?? "—"
+                        )}
                       </td>
                       <td className="px-4 py-3 text-muted-foreground text-xs">
                         {u.last_sign_in_at
