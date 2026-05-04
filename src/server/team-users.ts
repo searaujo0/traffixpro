@@ -113,7 +113,7 @@ export const listAssignmentsByUser = createServerFn({ method: "POST" })
     if (error) return { error: error.message, byUser: {} };
 
     const byUser: Record<string, string[]> = {};
-    for (const row of (data ?? []) as { user_id: string; client_id: string }[]) {
+    for (const row of (data ?? []) as unknown as { user_id: string; client_id: string }[]) {
       (byUser[row.user_id] ??= []).push(row.client_id);
     }
     return { error: null, byUser };
