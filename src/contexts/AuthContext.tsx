@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
-export type AppRole = "admin" | "cliente";
+export type AppRole = "admin" | "cliente" | "financeiro" | "social_media";
 
 export type Profile = { full_name: string | null };
 
@@ -11,6 +11,7 @@ type AuthState = {
   session: Session | null;
   role: AppRole | null;
   profile: Profile | null;
+  assignedClientIds: string[];
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
@@ -24,6 +25,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [assignedClientIds, setAssignedClientIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -34,16 +36,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (sess?.user) {
         setRole(null);
         setProfile(null);
+        setAssignedClientIds([]);
         setLoading(true);
         // diferir chamada async para evitar deadlock
         setTimeout(() => {
-          Promise.all([fetchRole(sess.user.id), fetchProfile(sess.user.id)]).finally(() =>
-            setLoading(false)
-          );
+          Promise.all([
+            fetchRole(sess.user.id),
+            fetchProfile(sess.user.id),
+            fetchAssignments(sess.user.id),
+          ]).finally(() => setLoading(false));
         }, 0);
       } else {
         setRole(null);
         setProfile(null);
+        setAssignedClientIds([]);
         setLoading(false);
       }
     });
@@ -54,13 +60,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (sess?.user) {
         setRole(null);
         setProfile(null);
+        setAssignedClientIds([]);
         setLoading(true);
-        Promise.all([fetchRole(sess.user.id), fetchProfile(sess.user.id)]).finally(() =>
-          setLoading(false)
-        );
+        Promise.all([
+          fetchRole(sess.user.id),
+          fetchProfile(sess.user.id),
+          fetchAssignments(sess.user.id),
+        ]).finally(() => setLoading(false));
       } else {
         setRole(null);
         setProfile(null);
+        setAssignedClientIds([]);
         setLoading(false);
       }
     });
@@ -86,6 +96,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(((data as { full_name: string | null } | null) ?? { full_name: null }) as Profile);
   }
 
+  async function fetchAssignments(userId: string) {
+    const { data } = await supabase
+      .from("client_assignments" as never)
+      .select("client_id")
+      .eq("user_id", userId);
+    const ids = ((data as { client_id: string }[] | null) ?? []).map((r) => r.client_id);
+    setAssignedClientIds(ids);
+  }
+
   async function refreshProfile() {
     if (user) await fetchProfile(user.id);
   }
@@ -99,11 +118,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
     setRole(null);
     setProfile(null);
+    setAssignedClientIds([]);
   }
 
   return (
     <AuthContext.Provider
-      value={{ user, session, role, profile, loading, signIn, signOut, refreshProfile }}
+      value={{ user, session, role, profile, assignedClientIds, loading, signIn, signOut, refreshProfile }}
     >
       {children}
     </AuthContext.Provider>
