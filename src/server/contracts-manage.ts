@@ -31,7 +31,7 @@ export const createContract = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => baseSchema.parse(i))
   .handler(async ({ data, context }) => {
-    const { data: row, error } = await context.supabase
+    const { data: row, error } = await (context.supabase as any)
       .from("client_contracts" as never)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .insert({
@@ -56,7 +56,7 @@ export const updateContract = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => updateSchema.parse(i))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
+    const { error } = await (context.supabase as any)
       .from("client_contracts" as never)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .update({
@@ -77,7 +77,7 @@ export const deleteContract = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
+    const { error } = await (context.supabase as any)
       .from("client_contracts" as never)
       .delete()
       .eq("id", data.id);
@@ -89,7 +89,7 @@ export const listContractsByClient = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => z.object({ clientId: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
-    const { data: rows, error } = await context.supabase
+    const { data: rows, error } = await (context.supabase as any)
       .from("client_contracts" as never)
       .select("*")
       .eq("client_id", data.clientId)
@@ -101,7 +101,7 @@ export const listContractsByClient = createServerFn({ method: "POST" })
 export const listAllContracts = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data: rows, error } = await context.supabase
+    const { data: rows, error } = await (context.supabase as any)
       .from("client_contracts" as never)
       .select("*, clients(name)")
       .order("start_date", { ascending: false });
