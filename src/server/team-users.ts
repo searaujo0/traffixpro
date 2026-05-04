@@ -54,7 +54,7 @@ export const createTeamUser = createServerFn({ method: "POST" })
         assigned_by: context.userId,
       }));
       const { error: aerr } = await adminClient
-        .from("client_assignments" as never)
+        .from("client_assignments" as any)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .insert(rows as any);
       if (aerr) return { error: `Usuário criado mas falha nas atribuições: ${aerr.message}`, userId: newUserId };
@@ -79,7 +79,7 @@ export const setUserAssignments = createServerFn({ method: "POST" })
     if (!adminClient) return { error: ADMIN_RUNTIME_UNAVAILABLE_MESSAGE };
 
     await adminClient
-      .from("client_assignments" as never)
+      .from("client_assignments" as any)
       .delete()
       .eq("user_id", data.userId);
 
@@ -90,7 +90,7 @@ export const setUserAssignments = createServerFn({ method: "POST" })
         assigned_by: context.userId,
       }));
       const { error } = await adminClient
-        .from("client_assignments" as never)
+        .from("client_assignments" as any)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .insert(rows as any);
       if (error) return { error: error.message };
@@ -108,7 +108,7 @@ export const listAssignmentsByUser = createServerFn({ method: "POST" })
     if (!adminClient) return { error: ADMIN_RUNTIME_UNAVAILABLE_MESSAGE, byUser: {} };
 
     const { data, error } = await adminClient
-      .from("client_assignments" as never)
+      .from("client_assignments" as any)
       .select("user_id, client_id");
     if (error) return { error: error.message, byUser: {} };
 
@@ -143,7 +143,7 @@ export const setTeamRole = createServerFn({ method: "POST" })
     // se mudou pra algo diferente de social_media, limpa atribuições
     if (data.role !== "social_media") {
       await adminClient
-        .from("client_assignments" as never)
+        .from("client_assignments" as any)
         .delete()
         .eq("user_id", data.userId);
     }
