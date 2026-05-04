@@ -1,73 +1,132 @@
-## Problema
+# M1 Digital como App de Equipe — Papéis, Permissões e Contratos
 
-As métricas exibidas no app (página `/campanhas`, painel do cliente, dashboard) usam **nomes diferentes** dos que aparecem no Facebook Ads Manager, e em alguns casos **calculam coisas diferentes** com o mesmo nome. Exemplos do que está errado hoje:
+## Papéis finais
 
-| Hoje no app | No Facebook Ads Manager |
+| Papel | O que enxerga |
 |---|---|
-| "Leads" | **Resultados** (depende do objetivo da campanha — pode ser Leads, Conversas, Compras, Cadastros…) |
-| "CPL" | **Custo por resultado** |
-| "Cliques" | **Cliques no link** (já está certo no número, mas o rótulo não diz isso) |
-| "CTR" | **CTR (taxa de cliques no link)** |
-| "Conversas" | **Conversas iniciadas por mensagens** |
-| "Custo por conversa" | **Custo por conversa iniciada por mensagens** |
+| **admin** (você) | Tudo. Único que cadastra usuários, define permissões e atribui clientes. |
+| **financeiro** | Financeiro, Comissões, Clientes (ficha + dados de contrato). Cadastra/edita contratos. Não vê campanhas/criativos. |
+| **social_media** | Só os clientes atribuídos a ele. Vê Clientes (sem dinheiro), Campanhas, Relatórios, Insights. **Sem** Spend, Faturamento, Comissão, Valor de contrato. |
+| **cliente** | Próprio painel (já existe). |
 
-Além disso, hoje a gente força "lead" como o tipo de conversão, mas se a campanha é de Compra ou de Mensagens o número fica zerado ou errado.
+## Contratos (novo)
 
-## O que vai mudar
+Hoje cada cliente tem um único `contract_value` solto. Vou criar uma tabela `client_contracts` pra registrar o ciclo de vida real do contrato:
 
-### 1. Capturar o "tipo de resultado" real de cada conta/campanha
+Campos: `id, client_id, monthly_value, start_date, end_date (nullable), is_indeterminate (bool), payment_day (1-31), status (ativo/encerrado/suspenso), notes, created_at, updated_at, created_by`.
 
-No `syncInsights` (server), além de já priorizar leads, vou:
-- Manter o mapa completo de `actions` (já fazemos)
-- **Detectar e salvar qual foi o "action_type" escolhido** como resultado principal (já temos `conversion_source` no raw — vou promover isso pra um campo só)
-- Salvar também o **rótulo legível em PT-BR** desse action_type (ex.: `offsite_conversion.fb_pixel_lead` → "Leads", `onsite_conversion.messaging_conversation_started_7d` → "Conversas iniciadas")
+Regras:
+- Um cliente pode ter vários contratos ao longo do tempo (renovação, reajuste).
+- Apenas **um contrato ativo por vez** por cliente (validação por trigger).
+- Se `is_indeterminate = true`, `end_date` é ignorado.
+- O Financeiro é responsável por cadastrar/editar; Admin também pode.
+- O `contract_value` antigo na tabela `clients` continua como fallback/atalho (sincronizado pelo contrato ativo via trigger), pra não quebrar Comissões nem o resto que já lê dele.
 
-Para isso, uma mudança simples no banco: adicionar duas colunas em `ad_insights`:
-- `result_type text` — o action_type bruto do Facebook
-- `result_label text` — o nome amigável em português (igual ao Ads Manager)
+Tela nova **Contratos** (dentro de Financeiro, ou aba na ficha do cliente):
+- Lista por cliente: contratos vigentes, encerrados, próximos do fim.
+- Aviso visual quando faltam ≤30 dias pro `end_date`.
+- Botão "Renovar" duplica o contrato com novas datas.
 
-### 2. Renomear as métricas em todo o app para bater com o Ads Manager
+## Atribuição por cliente
 
-Criar um arquivo central `src/lib/metaLabels.ts` com:
-- O **dicionário oficial** de action_type → label PT-BR (mesmos nomes do Ads Manager)
-- Constantes com os rótulos das métricas padrão: `"Valor usado"` (não "Investimento"), `"Impressões"`, `"Alcance"`, `"Cliques no link"`, `"CTR (cliques no link)"`, `"CPC (custo por clique no link)"`, `"CPM"`, `"Frequência"`, `"Resultados"`, `"Custo por resultado"`, etc.
+Tabela `client_assignments (id, client_id, user_id, assigned_at, assigned_by)`. Único por par `(client_id, user_id)`.
 
-Depois, substituir os textos em:
-- `src/routes/campanhas.tsx` ("Investimento" → "Valor usado", "Leads" → "Resultados", "CPL" → "Custo por resultado", "Cliques" → "Cliques no link")
-- `src/routes/meu-painel.tsx` (mesma coisa)
-- `src/routes/clientes.$id.tsx` e o PDF gerado em `src/lib/clientReportPdf.ts`
-- `src/routes/insights.tsx` e `src/routes/relatorios.tsx`
-- Tipos em `src/lib/dashboard.ts` ganham `resultLabel` para a UI saber o que mostrar
+- Admin vê todos os clientes sempre.
+- Financeiro vê todos os clientes (precisa pra cobrar todo mundo).
+- Social media vê **só** clientes onde `client_assignments.user_id = ele`.
+- Na tela de Usuários, ao editar um social_media: multi-select de clientes atribuídos.
+- Na ficha do cliente: lista quem atende aquele cliente (com botão pra adicionar/remover).
 
-### 3. Corrigir o cálculo do "Resultado" para respeitar o objetivo
+## Mascaramento de valores pra social_media
 
-Hoje a prioridade é fixa: lead → registration → purchase. Vou trocar por uma lógica que:
-- Olha o **objetivo** da conta/campanha quando disponível
-- Se o objetivo é Mensagens → resultado = conversas iniciadas
-- Se é Conversões com pixel de Lead → resultado = leads
-- Se é Vendas → resultado = compras
-- Fallback: pega o action_type mais relevante encontrado no período
+Componente `<Money value={...} />` que renderiza `R$ 1.234,56` pra quem pode ver e `—` pra social_media. Aplicado em:
+- Lista e ficha de Clientes (contract_value, marketing_team_cost, commission_pct).
+- Dashboard, Campanhas, Relatórios, Insights, Meu Painel: spend, faturamento, ROAS absoluto, lucro, comissão.
+- CTR, cliques, mensagens, alcance, impressões, ROAS relativo (%) **continuam visíveis**.
 
-Isso resolve o caso "M1D" onde os números vinham errados — provavelmente a campanha é de mensagens mas estava sendo lida como leads (ou vice-versa).
+Menus escondidos pra social_media: Financeiro, Comissões, Usuários, Meta Ads (integrações).
 
-### 4. Mostrar o tipo de resultado na UI
+## Banco — mudanças
 
-Em cada card/linha que mostra "Resultados: 123", colocar abaixo em cinza o que é (ex.: "Conversas iniciadas por mensagens" ou "Leads do pixel"), igual o Ads Manager faz no cabeçalho da coluna.
+```sql
+-- 1. Novos papéis
+ALTER TYPE app_role ADD VALUE 'financeiro';
+ALTER TYPE app_role ADD VALUE 'social_media';
 
-## Arquivos afetados
+-- 2. Atribuições
+CREATE TABLE client_assignments (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id uuid NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL,
+  assigned_at timestamptz NOT NULL DEFAULT now(),
+  assigned_by uuid,
+  UNIQUE(client_id, user_id)
+);
+ALTER TABLE client_assignments ENABLE ROW LEVEL SECURITY;
 
-- **Migração**: adicionar `result_type`, `result_label` em `ad_insights`
-- **Novo**: `src/lib/metaLabels.ts` — dicionário central de rótulos PT-BR
-- **Editar**: `src/server/meta-integration.ts` (`syncInsights` salva os novos campos com lógica nova)
-- **Editar**: `src/lib/dashboard.ts` (expor `resultLabel` agregado por conta/cliente)
-- **Editar**: `src/routes/campanhas.tsx`, `src/routes/meu-painel.tsx`, `src/routes/clientes.$id.tsx`, `src/routes/insights.tsx`, `src/routes/relatorios.tsx`, `src/lib/clientReportPdf.ts` — trocar os textos das métricas
+-- 3. Contratos
+CREATE TABLE client_contracts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id uuid NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  monthly_value numeric NOT NULL DEFAULT 0,
+  start_date date NOT NULL,
+  end_date date,
+  is_indeterminate boolean NOT NULL DEFAULT false,
+  payment_day int CHECK (payment_day BETWEEN 1 AND 31),
+  status text NOT NULL DEFAULT 'ativo' CHECK (status IN ('ativo','encerrado','suspenso')),
+  notes text,
+  created_by uuid,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE client_contracts ENABLE ROW LEVEL SECURITY;
 
-## O que **não** vou fazer (a menos que você peça)
+-- 4. Funções helper (security definer)
+-- has_any_role(_user_id, _roles app_role[]) -> bool
+-- is_assigned_to_client(_user_id, _client_id) -> bool
 
-- Não vou puxar dados a nível de campanha individual (continua agregado por conta) — se quiser ver campanha por campanha eu faço numa próxima rodada
-- Não vou mudar a moeda nem formato numérico (continua BRL)
-- Não vou re-sincronizar automaticamente o histórico — depois de aplicar, você clica em "Sincronizar" nas contas pra repopular com a lógica nova
+-- 5. Triggers
+-- - garantir um único contrato 'ativo' por cliente
+-- - sincronizar clients.contract_value com o monthly_value do contrato ativo
+-- - validar end_date >= start_date quando não indeterminado
+```
 
-## Pergunta antes de seguir
+## RLS atualizada
 
-Confirma uma coisa: você quer os rótulos em **português igual o Ads Manager BR** (ex.: "Valor usado", "Resultados", "Custo por resultado", "Cliques no link"), certo? Se preferir os termos em inglês (igual o Ads Manager em inglês: "Amount spent", "Results", "Cost per result", "Link clicks"), me avisa que eu ajusto.
+- **clients**: SELECT permitido a admin, financeiro (todos), social_media (só atribuídos via `is_assigned_to_client`), cliente dono. Mutations: admin + financeiro.
+- **client_contracts**: SELECT/ALL admin + financeiro. Cliente dono pode SELECT só os seus.
+- **client_assignments**: ALL admin. SELECT para o próprio user_id (pra saber a que está atribuído).
+- **campaigns / ad_accounts / ad_insights**: SELECT admin (todos), social_media (clientes atribuídos), financeiro **não vê** (não precisa), cliente dono (já existe).
+- **client_payments / sales**: admin + financeiro full. Social media não vê.
+
+## Frontend — mudanças
+
+- `AuthContext`: além de `role`, carregar `assignedClientIds` quando role = social_media.
+- Novo helper `usePermissions()`: `canSeeMoney`, `canManageUsers`, `canManageContracts`, `canSeeClient(id)`, `visibleNav`.
+- `AppLayout`: filtra `navItems` pelo papel.
+- `RoleGuard`: aceita os novos papéis nos `allow`.
+- Componente `<Money>` substitui `brl(...)` em telas compartilhadas.
+- `/admin/usuarios`:
+  - Botão "Novo usuário de equipe" → form (email, nome, senha inicial, role, `clientIds[]` se social_media).
+  - Coluna "Clientes" mostra contagem; botão abre dialog multi-select.
+- Nova rota `/contratos` (acessível a admin + financeiro): lista global de contratos com filtros (vigentes, próximos do fim, encerrados).
+- Aba "Contratos" dentro de `/clientes/$id` com CRUD completo.
+- Setup inicial (`/setup`) continua igual — primeiro user vira admin.
+
+## Servidor — endpoints novos
+
+`src/server/team-users.ts`:
+- `createTeamUser({ email, password, fullName, role, clientIds[] })`
+- `setUserAssignments({ userId, clientIds[] })`
+- estende `setUserRole` pra aceitar os novos papéis
+
+`src/server/contracts-manage.ts`:
+- `createContract`, `updateContract`, `endContract`, `listContractsByClient`, `listAllContracts`
+
+## Fora do escopo desta fase
+- Email automático de boas-vindas (segue pendente, depende de domínio).
+- Logs de auditoria.
+- Permissões por usuário individual (continua só por papel + atribuição).
+- Notificação automática 30 dias antes do fim do contrato (posso adicionar numa próxima).
+
+Tudo aprovado pra implementar?
