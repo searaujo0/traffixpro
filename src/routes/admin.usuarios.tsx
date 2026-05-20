@@ -136,12 +136,17 @@ function UsuariosPage() {
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
+    const cleanName = createForm.fullName.trim();
+    if (!cleanName) {
+      toast.error("Informe o nome do usuário.");
+      return;
+    }
     setCreating(true);
     const res = await callCreate({
       data: {
         email: createForm.email,
         password: createForm.password,
-        fullName: createForm.fullName || null,
+        fullName: cleanName,
         role: createForm.role,
         clientIds: createForm.role === "social_media" ? createForm.clientIds : [],
       },
@@ -419,8 +424,22 @@ function UsuariosPage() {
           </DialogHeader>
           <form onSubmit={handleCreate} className="space-y-3">
             <div>
-              <label className="text-xs text-muted-foreground">Nome</label>
-              <Input value={createForm.fullName} onChange={(e) => setCreateForm({ ...createForm, fullName: e.target.value })} />
+              <label className="text-xs text-muted-foreground">Nome completo *</label>
+              <Input
+                required
+                placeholder="Ex.: Matheus Silva"
+                value={createForm.fullName}
+                onChange={(e) => setCreateForm({ ...createForm, fullName: e.target.value })}
+                onBlur={(e) => {
+                  const formatted = e.target.value
+                    .trim()
+                    .toLowerCase()
+                    .split(/\s+/)
+                    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                    .join(" ");
+                  setCreateForm((f) => ({ ...f, fullName: formatted }));
+                }}
+              />
             </div>
             <div>
               <label className="text-xs text-muted-foreground">Email</label>
