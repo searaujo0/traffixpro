@@ -12,10 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SetupRouteImport } from './routes/setup'
 import { Route as RelatoriosRouteImport } from './routes/relatorios'
 import { Route as MeuPainelRouteImport } from './routes/meu-painel'
-import { Route as InsightsRouteImport } from './routes/insights'
 import { Route as FinanceiroRouteImport } from './routes/financeiro'
-import { Route as ContratosRouteImport } from './routes/contratos'
-import { Route as ComissoesRouteImport } from './routes/comissoes'
 import { Route as ClientesRouteImport } from './routes/clientes'
 import { Route as CampanhasRouteImport } from './routes/campanhas'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -40,24 +37,9 @@ const MeuPainelRoute = MeuPainelRouteImport.update({
   path: '/meu-painel',
   getParentRoute: () => rootRouteImport,
 } as any)
-const InsightsRoute = InsightsRouteImport.update({
-  id: '/insights',
-  path: '/insights',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const FinanceiroRoute = FinanceiroRouteImport.update({
   id: '/financeiro',
   path: '/financeiro',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ContratosRoute = ContratosRouteImport.update({
-  id: '/contratos',
-  path: '/contratos',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ComissoesRoute = ComissoesRouteImport.update({
-  id: '/comissoes',
-  path: '/comissoes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ClientesRoute = ClientesRouteImport.update({
@@ -106,10 +88,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/campanhas': typeof CampanhasRoute
   '/clientes': typeof ClientesRouteWithChildren
-  '/comissoes': typeof ComissoesRoute
-  '/contratos': typeof ContratosRoute
   '/financeiro': typeof FinanceiroRoute
-  '/insights': typeof InsightsRoute
   '/meu-painel': typeof MeuPainelRoute
   '/relatorios': typeof RelatoriosRoute
   '/setup': typeof SetupRoute
@@ -123,10 +102,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/campanhas': typeof CampanhasRoute
   '/clientes': typeof ClientesRouteWithChildren
-  '/comissoes': typeof ComissoesRoute
-  '/contratos': typeof ContratosRoute
   '/financeiro': typeof FinanceiroRoute
-  '/insights': typeof InsightsRoute
   '/meu-painel': typeof MeuPainelRoute
   '/relatorios': typeof RelatoriosRoute
   '/setup': typeof SetupRoute
@@ -141,10 +117,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/campanhas': typeof CampanhasRoute
   '/clientes': typeof ClientesRouteWithChildren
-  '/comissoes': typeof ComissoesRoute
-  '/contratos': typeof ContratosRoute
   '/financeiro': typeof FinanceiroRoute
-  '/insights': typeof InsightsRoute
   '/meu-painel': typeof MeuPainelRoute
   '/relatorios': typeof RelatoriosRoute
   '/setup': typeof SetupRoute
@@ -160,10 +133,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/campanhas'
     | '/clientes'
-    | '/comissoes'
-    | '/contratos'
     | '/financeiro'
-    | '/insights'
     | '/meu-painel'
     | '/relatorios'
     | '/setup'
@@ -177,10 +147,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/campanhas'
     | '/clientes'
-    | '/comissoes'
-    | '/contratos'
     | '/financeiro'
-    | '/insights'
     | '/meu-painel'
     | '/relatorios'
     | '/setup'
@@ -194,10 +161,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/campanhas'
     | '/clientes'
-    | '/comissoes'
-    | '/contratos'
     | '/financeiro'
-    | '/insights'
     | '/meu-painel'
     | '/relatorios'
     | '/setup'
@@ -212,10 +176,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   CampanhasRoute: typeof CampanhasRoute
   ClientesRoute: typeof ClientesRouteWithChildren
-  ComissoesRoute: typeof ComissoesRoute
-  ContratosRoute: typeof ContratosRoute
   FinanceiroRoute: typeof FinanceiroRoute
-  InsightsRoute: typeof InsightsRoute
   MeuPainelRoute: typeof MeuPainelRoute
   RelatoriosRoute: typeof RelatoriosRoute
   SetupRoute: typeof SetupRoute
@@ -247,32 +208,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MeuPainelRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/insights': {
-      id: '/insights'
-      path: '/insights'
-      fullPath: '/insights'
-      preLoaderRoute: typeof InsightsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/financeiro': {
       id: '/financeiro'
       path: '/financeiro'
       fullPath: '/financeiro'
       preLoaderRoute: typeof FinanceiroRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/contratos': {
-      id: '/contratos'
-      path: '/contratos'
-      fullPath: '/contratos'
-      preLoaderRoute: typeof ContratosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/comissoes': {
-      id: '/comissoes'
-      path: '/comissoes'
-      fullPath: '/comissoes'
-      preLoaderRoute: typeof ComissoesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/clientes': {
@@ -351,10 +291,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   CampanhasRoute: CampanhasRoute,
   ClientesRoute: ClientesRouteWithChildren,
-  ComissoesRoute: ComissoesRoute,
-  ContratosRoute: ContratosRoute,
   FinanceiroRoute: FinanceiroRoute,
-  InsightsRoute: InsightsRoute,
   MeuPainelRoute: MeuPainelRoute,
   RelatoriosRoute: RelatoriosRoute,
   SetupRoute: SetupRoute,
@@ -365,3 +302,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
