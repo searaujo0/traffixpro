@@ -6,7 +6,6 @@ import {
   Users,
   Megaphone,
   Wallet,
-  Sparkles,
   UserCog,
   Plug,
   Bell,
@@ -14,8 +13,6 @@ import {
   LogOut,
   Sun,
   Moon,
-  Receipt,
-  FileSignature,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useAuth, type AppRole } from "@/contexts/AuthContext";
@@ -30,9 +27,6 @@ const navItems: { to: string; label: string; icon: typeof LayoutDashboard; key: 
   { to: "/clientes", label: "Clientes", icon: Users, key: "clientes" },
   { to: "/campanhas", label: "Campanhas", icon: Megaphone, key: "campanhas" },
   { to: "/financeiro", label: "Financeiro", icon: Wallet, key: "financeiro" },
-  { to: "/contratos", label: "Contratos", icon: FileSignature, key: "contratos" },
-  { to: "/comissoes", label: "Comissões", icon: Receipt, key: "comissoes" },
-  { to: "/insights", label: "Insights", icon: Sparkles, key: "insights" },
   { to: "/integracoes/meta", label: "Meta Ads", icon: Plug, key: "meta" },
   { to: "/admin/usuarios", label: "Usuários", icon: UserCog, key: "usuarios" },
 ];

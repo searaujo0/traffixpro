@@ -1,22 +1,11 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { AppLayout } from "@/components/AppLayout";
 import { listAllContracts, type Contract } from "@/server/contracts-manage";
 import { Money } from "@/components/Money";
-import { Loader2, FileSignature, AlertTriangle } from "lucide-react";
+import { Loader2, AlertTriangle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-
-export const Route = createFileRoute("/contratos")({
-  head: () => ({
-    meta: [
-      { title: "Contratos — M1 Digital" },
-      { name: "description", content: "Gestão dos contratos dos clientes." },
-    ],
-  }),
-  component: ContratosPage,
-});
 
 type Row = Contract & { client_name: string };
 
@@ -40,7 +29,7 @@ function daysUntil(dateIso: string | null) {
   return Math.round((d - now) / 86400000);
 }
 
-function ContratosPage() {
+export function ContratosTab() {
   const callList = useServerFn(listAllContracts);
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
@@ -74,16 +63,15 @@ function ContratosPage() {
     });
 
   return (
-    <AppLayout allow={["admin", "financeiro"]}>
-      <div className="flex items-center gap-3 mb-6">
-        <FileSignature className="h-6 w-6 text-primary" />
+    <div className="space-y-4">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Contratos</h1>
-          <p className="text-sm text-muted-foreground">Acompanhe vigências e renovações dos clientes.</p>
+          <h2 className="text-lg font-semibold">Contratos</h2>
+          <p className="text-xs text-muted-foreground">Vigências, renovações e valores mensais.</p>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 mb-4">
+      <div className="flex flex-wrap items-center gap-2">
         {(["vigentes","expirando","encerrados","todos"] as const).map((t) => (
           <button
             key={t}
@@ -164,6 +152,6 @@ function ContratosPage() {
           </div>
         </div>
       )}
-    </AppLayout>
+    </div>
   );
 }

@@ -6,9 +6,6 @@ export type NavKey =
   | "clientes"
   | "campanhas"
   | "financeiro"
-  | "comissoes"
-  | "contratos"
-  | "insights"
   | "meta"
   | "usuarios";
 
@@ -18,9 +15,6 @@ const PERMISSIONS: Record<NavKey, AppRole[]> = {
   clientes: ["admin", "financeiro", "social_media"],
   campanhas: ["admin", "social_media"],
   financeiro: ["admin", "financeiro"],
-  comissoes: ["admin", "financeiro"],
-  contratos: ["admin", "financeiro"],
-  insights: ["admin", "social_media"],
   meta: ["admin"],
   usuarios: ["admin"],
 };
