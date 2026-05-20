@@ -49,8 +49,19 @@ export function AppLayout({
     navigate({ to: "/auth" });
   }
 
-  const displayName = profile?.full_name?.trim() || user?.email || "Admin";
-  const initials = (profile?.full_name?.trim() || user?.email || "AD")
+  const prettifyName = (raw: string) => {
+    // Pega a parte antes do "@" caso seja email
+    const base = raw.includes("@") ? raw.split("@")[0] : raw;
+    // Separa por espaço, ponto, hífen, underscore
+    const parts = base.split(/[\s._-]+/).filter(Boolean);
+    if (parts.length === 0) return raw;
+    // Mantém só o primeiro nome (mais limpo na sidebar)
+    const first = parts[0];
+    return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
+  };
+  const fullName = profile?.full_name?.trim();
+  const displayName = fullName ? fullName : prettifyName(user?.email || "Admin");
+  const initials = (fullName || prettifyName(user?.email || "AD"))
     .split(/\s+/)
     .map((p) => p[0])
     .slice(0, 2)
