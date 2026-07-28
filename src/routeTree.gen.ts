@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SetupRouteImport } from './routes/setup'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RelatoriosRouteImport } from './routes/relatorios'
 import { Route as MeuPainelRouteImport } from './routes/meu-painel'
 import { Route as FinanceiroRouteImport } from './routes/financeiro'
@@ -25,6 +26,11 @@ import { Route as AuthFacebookCallbackRouteImport } from './routes/auth_.faceboo
 const SetupRoute = SetupRouteImport.update({
   id: '/setup',
   path: '/setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RelatoriosRoute = RelatoriosRouteImport.update({
@@ -91,6 +97,7 @@ export interface FileRoutesByFullPath {
   '/financeiro': typeof FinanceiroRoute
   '/meu-painel': typeof MeuPainelRoute
   '/relatorios': typeof RelatoriosRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/setup': typeof SetupRoute
   '/admin/usuarios': typeof AdminUsuariosRoute
   '/clientes/$id': typeof ClientesIdRoute
@@ -105,6 +112,7 @@ export interface FileRoutesByTo {
   '/financeiro': typeof FinanceiroRoute
   '/meu-painel': typeof MeuPainelRoute
   '/relatorios': typeof RelatoriosRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/setup': typeof SetupRoute
   '/admin/usuarios': typeof AdminUsuariosRoute
   '/clientes/$id': typeof ClientesIdRoute
@@ -120,6 +128,7 @@ export interface FileRoutesById {
   '/financeiro': typeof FinanceiroRoute
   '/meu-painel': typeof MeuPainelRoute
   '/relatorios': typeof RelatoriosRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/setup': typeof SetupRoute
   '/admin/usuarios': typeof AdminUsuariosRoute
   '/clientes/$id': typeof ClientesIdRoute
@@ -136,6 +145,7 @@ export interface FileRouteTypes {
     | '/financeiro'
     | '/meu-painel'
     | '/relatorios'
+    | '/reset-password'
     | '/setup'
     | '/admin/usuarios'
     | '/clientes/$id'
@@ -150,6 +160,7 @@ export interface FileRouteTypes {
     | '/financeiro'
     | '/meu-painel'
     | '/relatorios'
+    | '/reset-password'
     | '/setup'
     | '/admin/usuarios'
     | '/clientes/$id'
@@ -164,6 +175,7 @@ export interface FileRouteTypes {
     | '/financeiro'
     | '/meu-painel'
     | '/relatorios'
+    | '/reset-password'
     | '/setup'
     | '/admin/usuarios'
     | '/clientes/$id'
@@ -179,6 +191,7 @@ export interface RootRouteChildren {
   FinanceiroRoute: typeof FinanceiroRoute
   MeuPainelRoute: typeof MeuPainelRoute
   RelatoriosRoute: typeof RelatoriosRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   SetupRoute: typeof SetupRoute
   AdminUsuariosRoute: typeof AdminUsuariosRoute
   IntegracoesMetaRoute: typeof IntegracoesMetaRoute
@@ -192,6 +205,13 @@ declare module '@tanstack/react-router' {
       path: '/setup'
       fullPath: '/setup'
       preLoaderRoute: typeof SetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/relatorios': {
@@ -294,6 +314,7 @@ const rootRouteChildren: RootRouteChildren = {
   FinanceiroRoute: FinanceiroRoute,
   MeuPainelRoute: MeuPainelRoute,
   RelatoriosRoute: RelatoriosRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   SetupRoute: SetupRoute,
   AdminUsuariosRoute: AdminUsuariosRoute,
   IntegracoesMetaRoute: IntegracoesMetaRoute,
